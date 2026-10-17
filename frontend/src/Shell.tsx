@@ -3,12 +3,18 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from "re
 import type { DayPlan, Projection } from "../../shared/curriculum";
 import type { UserProfile } from "../../shared/types";
 import { api } from "./api";
+import { Assignments } from "./pages/admin/Assignments";
+import { Dashboard } from "./pages/admin/Dashboard";
 import { Generate } from "./pages/admin/Generate";
 import { Items } from "./pages/admin/Items";
+import { Settings } from "./pages/admin/Settings";
+import { StudentDetail } from "./pages/admin/StudentDetail";
+import { AssignmentRun } from "./pages/AssignmentRun";
 import { Home } from "./pages/Home";
 import { Practice } from "./pages/Practice";
 import { Records } from "./pages/Records";
 import { Study } from "./pages/Study";
+import { UserSettings } from "./pages/UserSettings";
 
 export interface MeResponse {
   profile: UserProfile;
@@ -24,7 +30,7 @@ export interface MeResponse {
 
 function TabBar() {
   const { pathname } = useLocation();
-  if (pathname.startsWith("/study")) return null;
+  if (pathname.startsWith("/study") || pathname.startsWith("/assignments/")) return null;
   return (
     <nav className="tabbar">
       <NavLink to="/" end>
@@ -32,6 +38,7 @@ function TabBar() {
       </NavLink>
       <NavLink to="/practice">自由演習</NavLink>
       <NavLink to="/records">記録</NavLink>
+      <NavLink to="/settings">設定</NavLink>
     </nav>
   );
 }
@@ -56,17 +63,28 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
     <BrowserRouter>
       {isTeacher && (
         <nav className="topnav">
-          <span className="muted small">講師メニュー</span>
+          <span className="muted small">講師</span>
+          <NavLink to="/admin" end>
+            ダッシュボード
+          </NavLink>
+          <NavLink to="/admin/assignments">課題</NavLink>
           <NavLink to="/admin/generate">問題の生成</NavLink>
           <NavLink to="/admin/items">問題一覧</NavLink>
+          <NavLink to="/admin/settings">設定</NavLink>
         </nav>
       )}
       <div className="with-tabbar">
         <Routes>
-          <Route path="/" element={<Home me={me} onSignOut={onSignOut} />} />
+          <Route path="/" element={<Home me={me} />} />
           <Route path="/study" element={<Study onChanged={reload} />} />
           <Route path="/practice" element={<Practice onChanged={reload} />} />
           <Route path="/records" element={<Records />} />
+          <Route path="/settings" element={<UserSettings onSignOut={onSignOut} />} />
+          <Route path="/assignments/:id" element={<AssignmentRun onChanged={reload} />} />
+          {isTeacher && <Route path="/admin" element={<Dashboard />} />}
+          {isTeacher && <Route path="/admin/students/:sub" element={<StudentDetail />} />}
+          {isTeacher && <Route path="/admin/assignments" element={<Assignments />} />}
+          {isTeacher && <Route path="/admin/settings" element={<Settings />} />}
           {isTeacher && <Route path="/admin/generate" element={<Generate />} />}
           {isTeacher && <Route path="/admin/items" element={<Items />} />}
           <Route path="*" element={<Navigate to="/" replace />} />

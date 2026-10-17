@@ -150,6 +150,18 @@ export class AppStack extends Stack {
     });
     table.grantReadWriteData(apiFn);
     generatorFn.grantInvoke(apiFn);
+    // 講師の管理画面から生徒・講師のアカウントを操作する（このユーザープールだけに限定）
+    userPool.grant(
+      apiFn,
+      "cognito-idp:AdminCreateUser",
+      "cognito-idp:AdminAddUserToGroup",
+      "cognito-idp:AdminSetUserPassword",
+      "cognito-idp:AdminEnableUser",
+      "cognito-idp:AdminDisableUser",
+      "cognito-idp:AdminUpdateUserAttributes",
+      "cognito-idp:AdminDeleteUser",
+      "cognito-idp:ListUsersInGroup",
+    );
 
     const httpApi = new apigw.HttpApi(this, "HttpApi", {
       corsPreflight: {

@@ -500,6 +500,57 @@ textarea {
   font-family: inherit;
 }
 
+/* ---------- 講師画面 ---------- */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 700px) {
+  .grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field input[type="date"],
+.field input[type="number"] {
+  width: 100%;
+}
+
+.row > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+a.chip {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.chip-alert {
+  border-color: var(--danger);
+  color: var(--danger) !important;
+}
+
+.card.notice {
+  border-color: var(--primary);
+}
+
+.btn.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .checks {
   display: grid;
   grid-template-columns: max-content 1fr;

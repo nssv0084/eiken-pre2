@@ -21,6 +21,7 @@ interface Props {
   entries: StudyEntry[];
   items: Record<string, PublicItem>;
   context: AnswerContext;
+  assignmentId?: string;
   // 再開時に解答済みの設問を飛ばす
   answered?: Record<string, boolean>;
   onFinish: (summary: RunnerSummary) => void;
@@ -36,7 +37,7 @@ function Passage({ item }: { item: PublicItem }) {
   );
 }
 
-export function QuestionRunner({ title, entries, items, context, answered = {}, onFinish, onQuit }: Props) {
+export function QuestionRunner({ title, entries, items, context, assignmentId, answered = {}, onFinish, onQuit }: Props) {
   const steps = useMemo<Step[]>(
     () =>
       entries.flatMap((e) => {
@@ -81,7 +82,7 @@ export function QuestionRunner({ title, entries, items, context, answered = {}, 
     setBusy(true);
     setError("");
     try {
-      const res = await api<AnswerResult>("POST", "/answers", { questionId: step.question.id, chosenIndex: choice, context });
+      const res = await api<AnswerResult>("POST", "/answers", { questionId: step.question.id, chosenIndex: choice, context, assignmentId });
       setResult(res);
       setSummary((s) => ({
         total: s.total + 1,

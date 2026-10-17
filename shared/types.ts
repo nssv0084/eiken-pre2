@@ -108,7 +108,26 @@ export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
   other: "その他",
 };
 
-export type AnswerContext = "curriculum" | "review" | "free";
+export type AnswerContext = "curriculum" | "review" | "free" | "assignment";
+
+export interface Assignment {
+  id: string;
+  title: string;
+  type: QuestionType;
+  entries: StudyEntry[];
+  questionCount: number;
+  dueDate: string;
+  targets: string[];
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface AssignmentProgress {
+  sub: string;
+  answered: number;
+  correct: number;
+  completedAt?: string;
+}
 
 // 出題の1単位。長文は本文1つに対して、出題する設問だけを questionIds に入れる
 export interface StudyEntry {

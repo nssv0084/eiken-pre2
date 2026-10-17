@@ -1,9 +1,31 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { getItems, getJobs, getStock, getUsage, reviewItem, startGeneration } from "./admin";
+import { addAssignment, getAssignmentsForAdmin, removeAssignment } from "./admin-assignments";
+import {
+  addStudent,
+  addTeacher,
+  editStudent,
+  getSettingsForAdmin,
+  getStudent,
+  listStudents,
+  listTeachers,
+  removeStudent,
+  resetStudentPassword,
+  saveSettings,
+} from "./admin-students";
 import { getCaller, requireTeacher, type Caller } from "./lib/auth";
 import { HttpError, json } from "./lib/http";
 import type { RouteKey } from "./routes";
-import { getMe, getMyStats, getPractice, getTodaySession, submitAnswer, submitReport } from "./student";
+import {
+  getMe,
+  getMyAssignment,
+  getMyAssignments,
+  getMyStats,
+  getPractice,
+  getTodaySession,
+  submitAnswer,
+  submitReport,
+} from "./student";
 
 type Handler = (
   caller: Caller,
@@ -17,6 +39,21 @@ const handlers: Record<RouteKey, Handler> = {
   "POST /answers": async (caller, event) => json(200, await submitAnswer(caller, event)),
   "GET /practice": async (caller, event) => json(200, await getPractice(caller, event)),
   "POST /reports": async (caller, event) => json(200, await submitReport(caller, event)),
+  "GET /assignments": async (caller) => json(200, await getMyAssignments(caller)),
+  "GET /assignments/{id}": async (caller, event) => json(200, await getMyAssignment(caller, event)),
+  "GET /admin/students": async () => json(200, await listStudents()),
+  "POST /admin/students": async (_c, event) => json(201, await addStudent(event)),
+  "GET /admin/students/{sub}": async (_c, event) => json(200, await getStudent(event)),
+  "PUT /admin/students/{sub}": async (_c, event) => json(200, await editStudent(event)),
+  "DELETE /admin/students/{sub}": async (_c, event) => json(200, await removeStudent(event)),
+  "POST /admin/students/{sub}/reset-password": async (_c, event) => json(200, await resetStudentPassword(event)),
+  "GET /admin/teachers": async () => json(200, await listTeachers()),
+  "POST /admin/teachers": async (caller, event) => json(201, await addTeacher(caller, event)),
+  "GET /admin/settings": async () => json(200, await getSettingsForAdmin()),
+  "PUT /admin/settings": async (_c, event) => json(200, await saveSettings(event)),
+  "GET /admin/assignments": async () => json(200, await getAssignmentsForAdmin()),
+  "POST /admin/assignments": async (caller, event) => json(201, await addAssignment(caller, event)),
+  "DELETE /admin/assignments/{id}": async (_c, event) => json(200, await removeAssignment(event)),
   "GET /admin/stock": async () => json(200, await getStock()),
   "GET /admin/items": async (_c, event) => json(200, await getItems(event)),
   "PUT /admin/items/{id}": async (caller, event) => json(200, await reviewItem(caller, event)),

@@ -19,6 +19,10 @@
 | 課題 | `ASSIGN#{assignId}` | `META` | `ASSIGNS` | `{createdAt}` | 課題名、出題する設問、期限、対象の生徒 |
 | 課題の進み具合 | `USER#{sub}` | `ASSIGN#{assignId}` | — | — | 生徒ごとの解答状況 |
 | 問題の報告 | `REPORT#{reportId}` | `META` | `REPORTS#{status}` | `{createdAt}` | 報告した生徒、設問、理由、コメント |
+| 周回別の集計 | `USER#{sub}` | `CYCLE#{cycle 3桁}` | — | — | 周回ごとの形式別の解答数・正答数 |
+| 問題ごとの正答率 | `ITEM#{itemId}` | `STATS` | — | — | 復習以外での解答数・正答数、確認待ちに回した日時 |
+| 見本の問題 | `EXEMPLAR#{grade}#{type}` | `{itemId}` | — | — | 講師が見本にした問題の写し（作問時にAIへ渡す） |
+| 講師の承認数 | `STATS` | `TEACHER_APPROVED#{grade}#{type}` | — | — | 基準合わせの進み具合 |
 | 生成ジョブ | `JOB#{jobId}` | `META` | `JOBS` | `{createdAt}` | 形式、数、テーマ、状態、作れた数、費用 |
 | API 使用額 | `USAGE` | `TOTAL` | — | — | 累計の費用（マイクロドル単位の整数） |
 | API 使用記録 | `USAGE` | `LOG#{timestamp}` | — | — | 1回ごとのモデル、トークン数、費用 |

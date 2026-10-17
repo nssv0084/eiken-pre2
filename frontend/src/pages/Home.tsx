@@ -1,10 +1,55 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CURRICULUM_DAYS } from "../../../shared/curriculum";
 import { daysBetween } from "../../../shared/dates";
-import { isPassageType, QUESTION_TYPE_LABELS } from "../../../shared/types";
+import { isPassageType, QUESTION_TYPE_LABELS, type AssignmentProgress, type QuestionType } from "../../../shared/types";
+import { api } from "../api";
 import type { MeResponse } from "../Shell";
 
-export function Home({ me, onSignOut }: { me: MeResponse; onSignOut: () => void }) {
+type MyAssignment = AssignmentProgress & { id: string; title: string; type: QuestionType; dueDate: string; questionCount: number };
+
+function AssignmentCards({ todayDate }: { todayDate: string }) {
+  const navigate = useNavigate();
+  const [assignments, setAssignments] = useState<MyAssignment[]>([]);
+
+  useEffect(() => {
+    api<{ assignments: MyAssignment[] }>("GET", "/assignments")
+      .then((r) => setAssignments(r.assignments))
+      .catch(() => setAssignments([]));
+  }, []);
+
+  if (assignments.length === 0) return null;
+  return (
+    <section className="stack-sm">
+      {assignments.map((a) => {
+        const overdue = !a.completedAt && a.dueDate < todayDate;
+        return (
+          <div key={a.id} className={`card row between ${overdue ? "warn" : ""}`}>
+            <div>
+              <div className="small muted">
+                📌 課題 ・ 期限 {a.dueDate.slice(5).replace("-", "/")}
+                {overdue && "（期限切れ）"}
+              </div>
+              <strong>{a.title}</strong>
+              <div className="small muted">
+                {QUESTION_TYPE_LABELS[a.type]} {a.answered}/{a.questionCount}問
+              </div>
+            </div>
+            {a.completedAt ? (
+              <span className="chip">完了</span>
+            ) : (
+              <button className="btn primary small-btn" onClick={() => navigate(`/assignments/${a.id}`)}>
+                {a.answered > 0 ? "つづき" : "はじめる"}
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+export function Home({ me }: { me: MeResponse }) {
   const navigate = useNavigate();
   const { profile, today, projection } = me;
   const daysToExam = profile.examDate ? daysBetween(me.todayDate, profile.examDate) : undefined;
@@ -21,6 +66,8 @@ export function Home({ me, onSignOut }: { me: MeResponse; onSignOut: () => void 
         {daysToExam !== undefined && daysToExam >= 0 && <span className="chip">受験まで あと {daysToExam}日</span>}
         {me.reviewQueue > 0 && <span className="chip">復習待ち {me.reviewQueue}問</span>}
       </section>
+
+      <AssignmentCards todayDate={me.todayDate} />
 
       <section className="card stack">
         <p className="muted">
@@ -64,14 +111,6 @@ export function Home({ me, onSignOut }: { me: MeResponse; onSignOut: () => void 
         </section>
       )}
       {me.delayDays > 0 && <p className="muted small">予定より {me.delayDays}日 遅れています。</p>}
-
-      <button className="btn" onClick={onSignOut}>
-        ログアウト
-      </button>
-
-      <footer className="muted small">
-        問題の語彙レベル判定に『CEFR-J Wordlist Version 1.6』東京外国語大学投野由紀夫研究室 を利用しています。
-      </footer>
     </main>
   );
 }

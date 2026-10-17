@@ -3,15 +3,14 @@ import { z } from "zod";
 import { completedDays, delayDays, getDayPlan, nextProgress, projectProgress } from "../../shared/curriculum";
 import { addDays, studyDate } from "../../shared/dates";
 import {
-  isPassageType,
-  QUESTION_TYPES,
-  REPORT_REASONS,
-  type AnswerResult,
-  type DailyStat,
-  type QuestionType,
-  type TypeStat,
-  type UserProfile,
-} from "../../shared/types";
+  getAnswered,
+  getAssignment,
+  getProgresses,
+  listAssignments,
+  recordAssignmentAnswer,
+  summarizeProgress,
+} from "./lib/assignments";
+import { isPassageType, QUESTION_TYPES, REPORT_REASONS, type AnswerResult, type UserProfile } from "../../shared/types";
 import type { Caller } from "./lib/auth";
 import { HttpError, parseBody } from "./lib/http";
 import { getItem } from "./lib/items";
@@ -22,16 +21,16 @@ import { createSession, getSession, recordSessionAnswer, sessionQuestionIds, toP
 import { nextQuestionState } from "./lib/study/srs";
 import {
   addAnswerStats,
+  batchGetItems,
   countReviewQueue,
   getQuestionState,
-  listCycleStats,
-  listDailyStats,
   listDeliverableItems,
   loadQuestionStates,
   putAnswerLog,
   putQuestionState,
 } from "./lib/study/store";
 import { currentStreak, markStudied, STUDIED_DAY_MIN_ANSWERS } from "./lib/study/streak";
+import { statsForProfile } from "./lib/study/summary";
 
 export async function getMe(caller: Caller) {
   const profile = await getOrCreateProfile(caller);
@@ -61,13 +60,50 @@ export async function getTodaySession(caller: Caller) {
 const AnswerRequest = z.object({
   questionId: z.string().min(1),
   chosenIndex: z.number().int().min(0).max(3),
-  context: z.enum(["curriculum", "review", "free"]),
+  context: z.enum(["curriculum", "review", "free", "assignment"]),
+  assignmentId: z.string().optional(),
 });
+
+export async function getMyAssignments(caller: Caller) {
+  const today = studyDate();
+  const mine = (await listAssignments()).filter((a) => a.targets.includes(caller.sub));
+  const progress = await getProgresses(mine.map((a) => ({ sub: caller.sub, id: a.id })));
+  return {
+    assignments: mine
+      .map((a) => {
+        const p = summarizeProgress(caller.sub, progress.get(`${caller.sub}|${a.id}`));
+        return { id: a.id, title: a.title, type: a.type, dueDate: a.dueDate, questionCount: a.questionCount, ...p };
+      })
+      // 終わっていない課題と、完了してから1週間以内の課題を表示する
+      .filter((a) => !a.completedAt || a.completedAt.slice(0, 10) >= addDays(today, -7))
+      .sort((a, b) => Number(!!a.completedAt) - Number(!!b.completedAt) || a.dueDate.localeCompare(b.dueDate)),
+  };
+}
+
+async function requireMyAssignment(caller: Caller, id: string) {
+  const a = await getAssignment(id);
+  if (!a || !a.targets.includes(caller.sub)) throw new HttpError(404, "課題が見つかりません");
+  return a;
+}
+
+export async function getMyAssignment(caller: Caller, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const a = await requireMyAssignment(caller, event.pathParameters?.id ?? "");
+  const [items, answered] = await Promise.all([batchGetItems(a.entries.map((e) => e.itemId)), getAnswered(caller.sub, a.id)]);
+  return {
+    assignment: { id: a.id, title: a.title, type: a.type, dueDate: a.dueDate, entries: a.entries },
+    items: Object.fromEntries([...items].map(([id, item]) => [id, toPublicItem(item)])),
+    answered,
+  };
+}
 
 export async function submitAnswer(caller: Caller, event: APIGatewayProxyEventV2WithJWTAuthorizer): Promise<AnswerResult> {
   const parsed = AnswerRequest.safeParse(parseBody(event.body, event.isBase64Encoded));
   if (!parsed.success) throw new HttpError(400, "入力が正しくありません");
-  const { questionId, chosenIndex, context } = parsed.data;
+  const { questionId, chosenIndex, context, assignmentId } = parsed.data;
+  const assignment = context === "assignment" ? await requireMyAssignment(caller, assignmentId ?? "") : undefined;
+  if (assignment && !assignment.entries.some((e) => e.questionIds.includes(questionId))) {
+    throw new HttpError(400, "この課題の問題ではありません");
+  }
 
   const item = await getItem(questionId.split(":")[0]);
   const question = item?.questions.find((q) => q.id === questionId);
@@ -89,8 +125,10 @@ export async function submitAnswer(caller: Caller, event: APIGatewayProxyEventV2
   // 復習は間違えた問題ばかりなので、問題ごとの正答率の集計には入れない
   if (context !== "review") await recordItemUsage(item, correct);
 
+  if (assignment) await recordAssignmentAnswer(profile.sub, assignment, questionId, correct);
+
   let dayCompleted = false;
-  if (context !== "free" && profile.progress.lastCompletedDate !== today) {
+  if ((context === "curriculum" || context === "review") && profile.progress.lastCompletedDate !== today) {
     dayCompleted = await recordCurriculumAnswer(profile, questionId, correct, today);
   }
   if (!dayCompleted && answersToday >= STUDIED_DAY_MIN_ANSWERS) {
@@ -155,38 +193,7 @@ export async function submitReport(caller: Caller, event: APIGatewayProxyEventV2
   return { ok: true };
 }
 
-const emptyTypeStats = () =>
-  Object.fromEntries(QUESTION_TYPES.map((t) => [t, { total: 0, correct: 0 }])) as Record<QuestionType, TypeStat>;
-
-const toTypeStats = (row: Record<string, unknown>) => {
-  const stats = emptyTypeStats();
-  for (const t of QUESTION_TYPES) {
-    stats[t] = { total: (row[`${t}_total`] as number) ?? 0, correct: (row[`${t}_correct`] as number) ?? 0 };
-  }
-  return stats;
-};
-
 export async function getMyStats(caller: Caller) {
   const profile = await getOrCreateProfile(caller);
-  const today = studyDate();
-  const from = addDays(today, -29);
-  const [days, cycles, reviewQueue] = await Promise.all([
-    listDailyStats(profile.sub, from),
-    listCycleStats(profile.sub),
-    countReviewQueue(profile.sub),
-  ]);
-  const byDate = new Map(days.map((d) => [d.date as string, d]));
-  const daily: DailyStat[] = Array.from({ length: 30 }, (_, i) => {
-    const date = addDays(from, i);
-    const d = byDate.get(date);
-    return { date, total: (d?.total as number) ?? 0, correct: (d?.correct as number) ?? 0 };
-  });
-  return {
-    stats: profile.stats,
-    cycles: cycles.map((c) => ({ cycle: c.cycle as number, stats: toTypeStats(c) })),
-    daily,
-    reviewQueue,
-    streak: currentStreak(profile.streak, today),
-    progress: profile.progress,
-  };
+  return statsForProfile(profile, studyDate());
 }
