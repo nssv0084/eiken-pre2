@@ -16,8 +16,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  changes:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.diff.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+      # 手動実行は常にデプロイ。マージでは、アプリに関わるファイルが変わったときだけデプロイする（文書やテストだけなら承認待ちを出さない）
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || git diff --name-only HEAD^ HEAD | grep -qE '^(backend/src|frontend/(src|public)|infra/(lib|bin)|shared)/|^frontend/index\.html$|^infra/config\.ts$|(^|/)package(-lock)?\.json$|^\.github/workflows/deploy\.yml$'; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=false" >> "$GITHUB_OUTPUT"
+            echo "アプリに関わる変更がないため、デプロイしません。"
+          fi
+
+  deploy:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
