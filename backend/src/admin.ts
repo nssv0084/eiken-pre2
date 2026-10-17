@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import { z } from "zod";
+import { buildForecast, deliverableCount, MAX_PER_JOB } from "../../shared/stock";
 import { QUESTION_TYPES, type ItemStatus, type QuestionType } from "../../shared/types";
 import type { Caller } from "./lib/auth";
 import { HttpError, parseBody } from "./lib/http";
@@ -18,13 +19,11 @@ import {
 } from "./lib/items";
 import { createJob, listJobs, type GenerateJob } from "./lib/jobs";
 import { ESTIMATED_USD_PER_ITEM } from "./lib/pricing";
+import { listProfiles } from "./lib/profiles";
 import { getSettings } from "./lib/settings";
 import { getUsageSummary } from "./lib/usage";
 
 const lambda = new LambdaClient({});
-
-// 1回の生成ジョブで作れる上限（Lambda の15分以内に収まる量）
-export const MAX_PER_JOB: Record<QuestionType, number> = { vocab: 30, conversation: 15, cloze: 5, reading: 5 };
 
 const GenerateRequest = z
   .object({
@@ -52,7 +51,14 @@ export async function getStock() {
       ]),
     ),
   );
-  return { stock, calibration };
+  const [students, settings] = await Promise.all([listProfiles("student"), getSettings()]);
+  const forecast = buildForecast({
+    grade: "pre2",
+    deliverable: Object.fromEntries(QUESTION_TYPES.map((t) => [t, deliverableCount(stock[t])])) as Record<QuestionType, number>,
+    progresses: students.map((s) => s.progress),
+    alertDays: settings.stockAlertDays,
+  });
+  return { stock, calibration, forecast };
 }
 
 const ReviewRequest = z.object({

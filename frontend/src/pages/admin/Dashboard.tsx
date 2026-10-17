@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { Projection } from "../../../../shared/curriculum";
+import type { Forecast } from "../../../../shared/stock";
 import type { CurriculumProgress, ItemStatus, QuestionType, UsageSummary } from "../../../../shared/types";
 import { api } from "../../api";
 import { generateTempPassword } from "../../tempPassword";
+import { StockForecastCard } from "./StockForecast";
 
 export interface StudentRow {
   sub: string;
@@ -95,6 +97,7 @@ function AddStudentForm({ onAdded }: { onAdded: (msg: string) => void }) {
 export function Dashboard() {
   const [students, setStudents] = useState<StudentRow[]>();
   const [stock, setStock] = useState<Stock>();
+  const [forecast, setForecast] = useState<Forecast | null>(null);
   const [usage, setUsage] = useState<UsageSummary>();
   const [showAdd, setShowAdd] = useState(false);
   const [message, setMessage] = useState("");
@@ -103,12 +106,13 @@ export function Dashboard() {
   const load = useCallback(() => {
     Promise.all([
       api<{ students: StudentRow[] }>("GET", "/admin/students"),
-      api<{ stock: Stock }>("GET", "/admin/stock"),
+      api<{ stock: Stock; forecast: Forecast | null }>("GET", "/admin/stock"),
       api<{ usage: UsageSummary }>("GET", "/admin/usage"),
     ])
       .then(([s, st, u]) => {
         setStudents(s.students);
         setStock(st.stock);
+        setForecast(st.forecast);
         setUsage(u.usage);
       })
       .catch((e: Error) => setError(e.message));
@@ -198,6 +202,11 @@ export function Dashboard() {
           </div>
         )}
       </section>
+
+      <StockForecastCard
+        forecast={forecast}
+        leadName={forecast ? students.find((s) => s.progress.cycle === forecast.lead.cycle && s.progress.day === forecast.lead.day)?.nickname : undefined}
+      />
 
       {showAdd && (
         <AddStudentForm

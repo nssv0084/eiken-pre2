@@ -52,6 +52,7 @@ export function Settings() {
           budgetJpy: settings.budgetJpy,
           usdJpy: settings.usdJpy,
           inactiveAlertDays: settings.inactiveAlertDays,
+          stockAlertDays: settings.stockAlertDays,
         }),
       "設定を保存しました",
     );
@@ -102,6 +103,16 @@ export function Settings() {
               max={30}
               value={settings.inactiveAlertDays}
               onChange={(e) => setSettings({ ...settings, inactiveAlertDays: Number(e.target.value) })}
+            />
+          </label>
+          <label className="field">
+            <span>在庫の警告（問題が何日分より少なくなったら警告するか）</span>
+            <input
+              type="number"
+              min={1}
+              max={60}
+              value={settings.stockAlertDays}
+              onChange={(e) => setSettings({ ...settings, stockAlertDays: Number(e.target.value) })}
             />
           </label>
         </div>

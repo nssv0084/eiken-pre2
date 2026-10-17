@@ -138,6 +138,7 @@ const SettingsRequest = z.object({
   budgetJpy: z.number().int().min(0).max(100000),
   usdJpy: z.number().min(50).max(400),
   inactiveAlertDays: z.number().int().min(1).max(30),
+  stockAlertDays: z.number().int().min(1).max(60),
 });
 
 export async function getSettingsForAdmin() {
