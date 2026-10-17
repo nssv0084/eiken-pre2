@@ -72,6 +72,9 @@ export interface Item {
   source: "ai" | "manual";
   model?: string;
   verification?: Verification;
+  reports?: ItemReport[];
+  // 生徒の正答率による見直しのメモ
+  usageNote?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,6 +88,55 @@ export interface AnswerResult {
   correct: boolean;
   answerIndex: number;
   explanation: string;
+  dayCompleted?: boolean;
+}
+
+export interface ItemReport {
+  by: string;
+  reason: ReportReason;
+  comment?: string;
+  questionId: string;
+  at: string;
+}
+
+export const REPORT_REASONS = ["wrong-answer", "multiple-answers", "bad-explanation", "other"] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
+  "wrong-answer": "正解が違う",
+  "multiple-answers": "正解が2つ以上ある",
+  "bad-explanation": "解説がまちがっている・わかりにくい",
+  other: "その他",
+};
+
+export type AnswerContext = "curriculum" | "review" | "free";
+
+// 出題の1単位。長文は本文1つに対して、出題する設問だけを questionIds に入れる
+export interface StudyEntry {
+  itemId: string;
+  questionIds: string[];
+}
+
+export interface StudySet {
+  kind: QuestionType | "review";
+  label: string;
+  entries: StudyEntry[];
+}
+
+export interface SessionView {
+  cycle: number;
+  day: number;
+  phase: string;
+  isMock: boolean;
+  sets: StudySet[];
+  items: Record<string, PublicItem>;
+  answered: Record<string, boolean>;
+  shortage: boolean;
+}
+
+export interface DailyStat {
+  date: string;
+  total: number;
+  correct: number;
 }
 
 export interface TypeStat {
@@ -105,6 +157,9 @@ export interface CurriculumProgress {
   // その日の分を最後に完了した学習日（YYYY-MM-DD、午前3時区切り）。同じ日に2日分は進めない
   lastCompletedDate?: string;
 }
+
+// 周回ごとの成績（周回の振り返り・前の周との比較に使う）
+export type CycleStats = Record<string, Record<QuestionType, TypeStat>>;
 
 export interface UserProfile {
   sub: string;

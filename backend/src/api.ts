@@ -1,10 +1,9 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { completedDays, getDayPlan } from "../../shared/curriculum";
 import { getItems, getJobs, getStock, getUsage, reviewItem, startGeneration } from "./admin";
 import { getCaller, requireTeacher, type Caller } from "./lib/auth";
 import { HttpError, json } from "./lib/http";
-import { getOrCreateProfile } from "./lib/profiles";
 import type { RouteKey } from "./routes";
+import { getMe, getMyStats, getPractice, getTodaySession, submitAnswer, submitReport } from "./student";
 
 type Handler = (
   caller: Caller,
@@ -12,14 +11,12 @@ type Handler = (
 ) => Promise<APIGatewayProxyResultV2>;
 
 const handlers: Record<RouteKey, Handler> = {
-  "GET /me": async (caller) => {
-    const profile = await getOrCreateProfile(caller);
-    return json(200, {
-      profile,
-      today: getDayPlan(profile.grade, profile.progress.day),
-      completedDays: completedDays(profile.progress),
-    });
-  },
+  "GET /me": async (caller) => json(200, await getMe(caller)),
+  "GET /me/stats": async (caller) => json(200, await getMyStats(caller)),
+  "GET /session": async (caller) => json(200, await getTodaySession(caller)),
+  "POST /answers": async (caller, event) => json(200, await submitAnswer(caller, event)),
+  "GET /practice": async (caller, event) => json(200, await getPractice(caller, event)),
+  "POST /reports": async (caller, event) => json(200, await submitReport(caller, event)),
   "GET /admin/stock": async () => json(200, await getStock()),
   "GET /admin/items": async (_c, event) => json(200, await getItems(event)),
   "PUT /admin/items/{id}": async (caller, event) => json(200, await reviewItem(caller, event)),

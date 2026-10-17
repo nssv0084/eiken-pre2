@@ -1,4 +1,4 @@
-import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { studyDate } from "../../../shared/dates";
 import { QUESTION_TYPES, type QuestionType, type TypeStat, type UserProfile } from "../../../shared/types";
 import type { Caller } from "./auth";
@@ -6,6 +6,23 @@ import { ddb, keys, TABLE_NAME } from "./db";
 
 const emptyStats = () =>
   Object.fromEntries(QUESTION_TYPES.map((t) => [t, { total: 0, correct: 0 }])) as Record<QuestionType, TypeStat>;
+
+export async function updateProfile(
+  sub: string,
+  fields: Partial<Pick<UserProfile, "progress" | "streak" | "examDate" | "startDate" | "nickname">>,
+): Promise<void> {
+  const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
+  if (entries.length === 0) return;
+  await ddb.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: keys.userProfile(sub),
+      UpdateExpression: `SET ${entries.map((_, i) => `#k${i} = :v${i}`).join(", ")}`,
+      ExpressionAttributeNames: Object.fromEntries(entries.map(([k], i) => [`#k${i}`, k])),
+      ExpressionAttributeValues: Object.fromEntries(entries.map(([, v], i) => [`:v${i}`, v])),
+    }),
+  );
+}
 
 export function newProfile(caller: Caller, now: Date): UserProfile {
   return {

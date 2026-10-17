@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { QUESTION_TYPE_LABELS, QUESTION_TYPES, type Item, type ItemStatus, type QuestionType } from "../../../../shared/types";
+import {
+  QUESTION_TYPE_LABELS,
+  QUESTION_TYPES,
+  REPORT_REASON_LABELS,
+  type Item,
+  type ItemStatus,
+  type QuestionType,
+} from "../../../../shared/types";
 import { api } from "../../api";
 
 const STATUS_LABELS: Record<ItemStatus, string> = {
@@ -94,6 +101,21 @@ function ItemCard({ item, onChange }: { item: Item; onChange: (item: Item) => vo
             <dd className={item.verification.passed ? undefined : "error"}>{item.verification.notes}</dd>
           </>
         )}
+        {item.usageNote && (
+          <>
+            <dt>生徒の正答率</dt>
+            <dd className="error">{item.usageNote}</dd>
+          </>
+        )}
+        {item.reports?.map((r, i) => (
+          <span key={i} style={{ display: "contents" }}>
+            <dt>生徒の報告</dt>
+            <dd className="error">
+              {REPORT_REASON_LABELS[r.reason]}
+              {r.comment && `「${r.comment}」`}（{r.by}、{new Date(r.at).toLocaleDateString("ja-JP")}）
+            </dd>
+          </span>
+        ))}
         {item.reviewedBy && (
           <>
             <dt>講師の確認</dt>
