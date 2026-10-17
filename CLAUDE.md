@@ -1,0 +1,25 @@
+# 英検準2級トレーニング — AI への指示
+
+個人塾向けの学習 Web アプリ（生徒2〜10名）。保守担当は1人（池本）。詳細は docs/ を参照。
+
+## 進め方
+- 返答はすべて日本語。
+- 仕様が先。機能を足すときは docs/requirements.md（と必要なら screens.md、data-model.md）を先に更新し、同じ PR でコードを変える。
+- 変更は `npm run verify` が通ってから完了とする。UI を変えたら実際に画面で確認する。
+- 破壊的な操作（デプロイ、データ削除、force push）は実行前にユーザーへ確認する。
+
+## コマンド
+- `npm run verify` — 型チェック + テスト + ビルド（CI と同じ）
+- `npm run typecheck` / `npm test` / `npm run dev`
+- `npm run deploy` — 本番へデプロイ（手元から行う場合は確認が必要）
+
+## 構成
+shared/（型・カリキュラム・日付）、backend/（Lambda、テストは backend/test）、frontend/（React + Vite）、infra/（AWS CDK）、docs/（仕様）。
+
+## 守ること
+- AWS はプロファイル `eiken`（アカウントは infra/config.ts に固定）。他のアカウントに触れない。`check-account` を迂回しない。
+- API キー、アクセスキー、パスワードをコード・チャット・コミットに書かない。Anthropic の API キーは Secrets Manager。
+- 問題生成は Anthropic API を直接使う（Bedrock は使わない）。費用は予算の90%で止まる。上限は設定画面で変える。
+- 生成プロンプトを変えたら、少量を試し生成して品質（承認率、難易度、解説）を確認する。
+- 問題データは全生徒で共有。テストで作ったデータは必ず消す。
+- 学習日の区切りは日本時間の午前3時。
