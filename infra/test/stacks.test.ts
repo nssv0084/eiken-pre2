@@ -26,7 +26,7 @@ const appT = Template.fromStack(appStack);
 const githubT = Template.fromStack(github);
 
 describe("アプリのスタック", () => {
-  it("ルート定義の全経路が API にあり、すべて Cognito の認証つき", () => {
+  it("[NFR-04] ルート定義の全経路が API にあり、すべて Cognito の認証つき", () => {
     const routes = appT.findResources("AWS::ApiGatewayV2::Route");
     const keys = Object.values(routes).map((r) => r.Properties.RouteKey as string);
     expect(keys.sort()).toEqual([...ROUTE_KEYS].sort());
@@ -35,7 +35,7 @@ describe("アプリのスタック", () => {
     }
   });
 
-  it("データのテーブルとユーザープールは削除時も残り、テーブルは復元可能", () => {
+  it("[NFR-05] データのテーブルとユーザープールは削除時も残り、テーブルは復元可能", () => {
     appT.hasResource("AWS::DynamoDB::GlobalTable", {
       DeletionPolicy: "Retain",
       Properties: { Replicas: Match.arrayWith([Match.objectLike({ PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true } })]) },
@@ -43,7 +43,7 @@ describe("アプリのスタック", () => {
     appT.hasResource("AWS::Cognito::UserPool", { DeletionPolicy: "Retain" });
   });
 
-  it("画面の保管先は公開されない", () => {
+  it("[NFR-04] 画面の保管先は公開されない", () => {
     appT.hasResourceProperties("AWS::S3::Bucket", {
       PublicAccessBlockConfiguration: {
         BlockPublicAcls: true,
@@ -68,11 +68,11 @@ describe("アプリのスタック", () => {
     });
   });
 
-  it("予算アラートがある", () => {
+  it("[NFR-06] 予算アラートがある", () => {
     appT.resourceCountIs("AWS::Budgets::Budget", 1);
   });
 
-  it("API キーはコードやテンプレートに書かれない", () => {
+  it("[NFR-04] API キーはコードやテンプレートに書かれない", () => {
     expect(JSON.stringify(appT.toJSON())).not.toMatch(/sk-ant-/);
   });
 });

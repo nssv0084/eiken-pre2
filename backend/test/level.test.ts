@@ -4,7 +4,7 @@ import { lemmaCandidates, profileText, wordLevel } from "../src/lib/level/cefr";
 import { checkItemLevel } from "../src/lib/level/check";
 
 describe("wordLevel", () => {
-  it("見出し語のレベルを引ける", () => {
+  it("[LVL-01] 見出し語のレベルを引ける", () => {
     expect(wordLevel("rule")).toBe("A1");
     expect(wordLevel("reliable")).toBe("B1");
   });
@@ -47,12 +47,12 @@ const vocabItem = (answer: string, distractors: string[], focus: Item["focus"] =
   }) as unknown as Item;
 
 describe("checkItemLevel", () => {
-  it("正解の単語が A1 なら不合格、A2〜B1 なら合格", () => {
+  it("[LVL-01] 正解の単語が A1 なら不合格、A2〜B1 なら合格", () => {
     expect(checkItemLevel(vocabItem("always", ["rarely", "never", "hardly"])).verdict).toBe("fail");
     expect(checkItemLevel(vocabItem("reliable", ["expensive", "empty", "noisy"])).verdict).toBe("pass");
   });
 
-  it("誤りの選択肢の多くが A1 なら確認待ち", () => {
+  it("[LVL-01] 誤りの選択肢の多くが A1 なら確認待ち", () => {
     expect(checkItemLevel(vocabItem("reliable", ["big", "red", "happy"])).verdict).toBe("review");
   });
 
@@ -63,7 +63,7 @@ describe("checkItemLevel", () => {
     expect(checkItemLevel(vocabItem("who", ["what", "which", "whose"], "grammar")).verdict).toBe("pass");
   });
 
-  it("長文は難しい語の割合で判定する", () => {
+  it("[LVL-01] 長文は難しい語の割合で判定する", () => {
     const easy = { type: "reading", questions: [], passage: "I like my school. My friends are kind. We study English every day." } as unknown as Item;
     expect(checkItemLevel(easy).verdict).toBe("pass");
     const hard = {
