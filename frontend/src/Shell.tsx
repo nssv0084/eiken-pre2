@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes, useLocation } from "re
 import type { DayPlan, Projection } from "../../shared/curriculum";
 import type { UserProfile } from "../../shared/types";
 import { api } from "./api";
+import { Icon } from "./components/Icon";
 import { Assignments } from "./pages/admin/Assignments";
 import { Dashboard } from "./pages/admin/Dashboard";
 import { Generate } from "./pages/admin/Generate";
@@ -34,11 +35,21 @@ function TabBar() {
   return (
     <nav className="tabbar">
       <NavLink to="/" end>
+        <Icon name="home" />
         ホーム
       </NavLink>
-      <NavLink to="/practice">自由演習</NavLink>
-      <NavLink to="/records">記録</NavLink>
-      <NavLink to="/settings">設定</NavLink>
+      <NavLink to="/practice">
+        <Icon name="pencil" />
+        自由演習
+      </NavLink>
+      <NavLink to="/records">
+        <Icon name="chart" />
+        記録
+      </NavLink>
+      <NavLink to="/settings">
+        <Icon name="gear" />
+        設定
+      </NavLink>
     </nav>
   );
 }

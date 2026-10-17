@@ -53,8 +53,12 @@ export function Login({ onSignedIn }: Props) {
   };
 
   return (
-    <main className="page narrow">
-      <h1 className="title">英検準2級トレーニング</h1>
+    <main className="page narrow stack">
+      <section className="hero" style={{ alignItems: "center", textAlign: "center", marginTop: 24 }}>
+        <img src="/icon-192.png" alt="" width={72} height={72} style={{ borderRadius: 18 }} />
+        <h1 className="greeting">英検準2級トレーニング</h1>
+        <p style={{ margin: 0, opacity: 0.9 }}>毎日すこしずつ、合格まで一緒に。</p>
+      </section>
       {step === "signIn" ? (
         <form className="card stack" onSubmit={handleSignIn}>
           <label className="field">

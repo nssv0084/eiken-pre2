@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { isPassageType, QUESTION_TYPE_LABELS, QUESTION_TYPES, type PublicItem, type QuestionType, type StudyEntry } from "../../../shared/types";
 import { api } from "../api";
+import { Icon, TYPE_ICONS } from "../components/Icon";
 import { QuestionRunner, type RunnerSummary } from "../components/QuestionRunner";
 import { SetSummary } from "../components/SetSummary";
 
@@ -79,6 +80,9 @@ export function Practice({ onChanged }: { onChanged: () => void }) {
               setCount(isPassageType(t) ? 1 : 10);
             }}
           >
+            <span className="plan-icon">
+              <Icon name={TYPE_ICONS[t]} size={18} />
+            </span>
             {QUESTION_TYPE_LABELS[t]}
           </button>
         ))}
@@ -92,8 +96,8 @@ export function Practice({ onChanged }: { onChanged: () => void }) {
         ))}
       </div>
       {error && <p className="error">{error}</p>}
-      <button className="btn primary" disabled={busy} onClick={start}>
-        はじめる
+      <button className="btn primary btn-hero" disabled={busy} onClick={start}>
+        はじめる ▶
       </button>
     </main>
   );

@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnswerContext, AnswerResult, PublicItem, PublicQuestion, StudyEntry } from "../../../shared/types";
 import { api } from "../api";
+import { Icon } from "./Icon";
 import { ReportDialog } from "./ReportDialog";
 
 export interface RunnerSummary {
@@ -61,6 +62,15 @@ export function QuestionRunner({ title, entries, items, context, assignmentId, a
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [summary, setSummary] = useState<RunnerSummary>({ total: 0, correct: 0, wrong: [], dayCompleted: false });
+  const resultRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [result]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [index]);
 
   if (steps.length === 0) {
     return (
@@ -118,17 +128,20 @@ export function QuestionRunner({ title, entries, items, context, assignmentId, a
 
   return (
     <div className="runner stack">
-      <header className="row between">
-        <button className="btn small-btn" onClick={onQuit}>
-          中断
+      <header className="runner-head">
+        <button className="btn small-btn" onClick={onQuit} aria-label="中断">
+          <Icon name="x" size={18} />
         </button>
-        <span className="muted">
-          {title}　{index + 1} / {steps.length}
+        <div className="progress">
+          <div className="progress-fill" style={{ width: `${((index + (result ? 1 : 0)) / steps.length) * 100}%` }} />
+        </div>
+        <span className="runner-count">
+          {index + 1} / {steps.length}
         </span>
       </header>
-      <div className="progress">
-        <div className="progress-fill" style={{ width: `${(index / steps.length) * 100}%` }} />
-      </div>
+      <p className="muted small" style={{ margin: 0 }}>
+        {title}
+      </p>
 
       {hasPassage && (
         <div className="tabs only-narrow">
@@ -148,10 +161,12 @@ export function QuestionRunner({ title, entries, items, context, assignmentId, a
           </div>
         )}
         <div className={`stack ${hasPassage && tab !== "question" ? "hide-narrow" : ""}`}>
-          <p className="stem">
-            {step.item.questions.length > 1 && <strong>設問{step.indexInItem + 1}　</strong>}
-            {step.question.stem}
-          </p>
+          <div className="stem-card">
+            <p className="stem">
+              {step.item.questions.length > 1 && <strong>設問{step.indexInItem + 1}　</strong>}
+              {step.question.stem}
+            </p>
+          </div>
           <div className="stack-sm">
             {step.question.choices.map((c, j) => (
               <button key={j} className={choiceClass(j)} disabled={!!result || busy} onClick={() => answer(j)}>
@@ -163,8 +178,20 @@ export function QuestionRunner({ title, entries, items, context, assignmentId, a
           {error && <p className="error small">{error}</p>}
 
           {result && (
-            <section className={`result card stack-sm ${result.correct ? "ok" : "ng"}`}>
-              <strong>{result.correct ? "⭕ 正解！" : `❌ 不正解　正解: ${result.answerIndex + 1} ${step.question.choices[result.answerIndex]}`}</strong>
+            <section ref={resultRef} className={`result card stack-sm ${result.correct ? "ok" : "ng"}`}>
+              <div className="result-head">
+                <span className="result-mark">
+                  <Icon name={result.correct ? "check" : "x"} size={24} strokeWidth={3} />
+                </span>
+                <span>
+                  {result.correct ? "正解！" : "おしい！"}
+                  {!result.correct && (
+                    <span className="small" style={{ display: "block", color: "var(--text)" }}>
+                      正解は {result.answerIndex + 1}. {step.question.choices[result.answerIndex]}
+                    </span>
+                  )}
+                </span>
+              </div>
               <p className="explanation">{result.explanation}</p>
               <div className="row between">
                 {reported ? (
