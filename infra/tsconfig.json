@@ -7,7 +7,15 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["bin", "lib", "scripts", "config.ts"]
+  "include": [
+    "bin",
+    "lib",
+    "scripts",
+    "config.ts",
+    "test"
+  ]
 }
