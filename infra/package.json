@@ -8,7 +8,9 @@
     "synth": "cdk synth",
     "diff": "npm run check-account && cdk diff --all --profile eiken",
     "bootstrap": "npm run check-account && cdk bootstrap --profile eiken",
-    "deploy": "npm run check-account && cdk deploy --all --profile eiken --require-approval broadening"
+    "deploy": "npm run check-account && cdk deploy EikenCert EikenApp --profile eiken --require-approval broadening",
+    "deploy:ci": "cdk deploy EikenCert EikenApp --require-approval broadening --ci",
+    "deploy:github": "npm run check-account && cdk deploy EikenGithub --profile eiken"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.273.0",

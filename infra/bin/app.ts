@@ -2,6 +2,7 @@ import { App } from "aws-cdk-lib";
 import { config } from "../config";
 import { AppStack } from "../lib/app-stack";
 import { CertStack } from "../lib/cert-stack";
+import { GithubStack } from "../lib/github-stack";
 
 const app = new App();
 
@@ -25,4 +26,10 @@ new AppStack(app, "EikenApp", {
   crossRegionReferences: true,
   config: cfg,
   certificate: cert.certificate,
+});
+
+// GitHub Actions からのデプロイ用ロール。最初の1回だけ手元から `npm run deploy:github -w infra` で作る
+new GithubStack(app, "EikenGithub", {
+  env: { account: accountId, region: config.region },
+  config: cfg,
 });
