@@ -5,3 +5,5 @@ cdk.out/
 .env*
 !.env.example
 frontend/public/config.json
+
+.claude/settings.local.json
