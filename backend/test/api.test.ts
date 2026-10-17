@@ -50,7 +50,7 @@ describe("API の認可", () => {
     expect(studentRoutes.length).toBeGreaterThan(5);
   });
 
-  it.each(adminRoutes)("%s は生徒には403", async (key) => {
+  it.each(adminRoutes)("%s [NFR-04] は生徒には403", async (key) => {
     ok.mockClear();
     const res = await call(key, student);
     expect(res.statusCode).toBe(403);
@@ -65,7 +65,7 @@ describe("API の認可", () => {
     expect((await call(key, student)).statusCode).toBe(200);
   });
 
-  it.each(ROUTE_KEYS)("%s は認証情報がなければ401", async (key) => {
+  it.each(ROUTE_KEYS)("%s [NFR-04] は認証情報がなければ401", async (key) => {
     expect((await call(key, undefined)).statusCode).toBe(401);
   });
 

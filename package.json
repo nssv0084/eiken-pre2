@@ -12,6 +12,7 @@
     "test": "npm test -w backend && npm test -w infra && npm test -w frontend",
     "dev": "npm run dev -w frontend",
     "deploy": "npm run build -w frontend && npm run deploy -w infra",
-    "verify": "npm run typecheck && npm run build && npm test"
+    "verify": "npm run typecheck && npm run build && npm test && npm run trace",
+    "trace": "tsx scripts/trace.ts"
   }
 }

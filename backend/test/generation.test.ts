@@ -21,25 +21,25 @@ const vocab = (overrides: Partial<GenItem["questions"][0]> = {}): GenItem => ({
 });
 
 describe("validateGenItem", () => {
-  it("正しい語彙問題は通る", () => {
+  it("[GEN-06] 正しい語彙問題は通る", () => {
     expect(validateGenItem(vocab(), "vocab")).toBeNull();
   });
 
-  it("選択肢の数・重複・正解番号・空所の崩れをはじく", () => {
+  it("[GEN-06] 選択肢の数・重複・正解番号・空所の崩れをはじく", () => {
     expect(validateGenItem(vocab({ choices: ["a", "b", "c"] }), "vocab")).toMatch("4つ");
     expect(validateGenItem(vocab({ choices: ["a", "b", "c", "A"] }), "vocab")).toMatch("重複");
     expect(validateGenItem(vocab({ answerIndex: 4 }), "vocab")).toMatch("正解番号");
     expect(validateGenItem(vocab({ stem: "No blank here." }), "vocab")).toMatch("空所");
   });
 
-  it("内容一致はジャンルで設問数が決まる", () => {
+  it("[GEN-06] 内容一致はジャンルで設問数が決まる", () => {
     const q = vocab().questions[0];
     const reading: GenItem = { topic: "t", focus: "none", title: "Hi", passage: "x".repeat(400), questions: [q, q, q] };
     expect(validateGenItem(reading, "reading", "email")).toBeNull();
     expect(validateGenItem(reading, "reading", "explanation")).toMatch("設問数");
   });
 
-  it("長文空所は本文に ( 1 ) ( 2 ) が必要", () => {
+  it("[GEN-06] 長文空所は本文に ( 1 ) ( 2 ) が必要", () => {
     const q = vocab().questions[0];
     const base = { topic: "t", focus: "none" as const, title: "T", questions: [q, q] };
     expect(validateGenItem({ ...base, passage: `${"x".repeat(300)} ( 1 ) and ( 2 )` }, "cloze")).toBeNull();
@@ -71,17 +71,17 @@ describe("judgeSolve", () => {
     ...extra,
   });
 
-  it("答えが一致し品質も問題なければ合格", () => {
+  it("[GEN-07] 答えが一致し品質も問題なければ合格", () => {
     expect(judgeSolve(item, solve()).passed).toBe(true);
   });
 
-  it("答えの不一致・正解が複数・レベル不適合は不合格", () => {
+  it("[GEN-07] 答えの不一致・正解が複数・レベル不適合は不合格", () => {
     expect(judgeSolve(item, solve({ chosenNumber: 2 })).passed).toBe(false);
     expect(judgeSolve(item, solve({ uniquelyCorrect: false })).passed).toBe(false);
     expect(judgeSolve(item, solve({}, { levelAppropriate: false })).passed).toBe(false);
   });
 
-  it("難しさ3・4は合格、2は講師の確認へ、1・5は不合格", () => {
+  it("[LVL-02] 難しさ3・4は合格、2は講師の確認へ、1・5は不合格", () => {
     expect(judgeSolve(item, solve({}, { difficulty: 3 }))).toMatchObject({ passed: true, needsReview: false });
     expect(judgeSolve(item, solve({}, { difficulty: 4 }))).toMatchObject({ passed: true, needsReview: false });
     expect(judgeSolve(item, solve({}, { difficulty: 2 }))).toMatchObject({ passed: true, needsReview: true });
@@ -91,7 +91,7 @@ describe("judgeSolve", () => {
 });
 
 describe("buildGenerationPrompt", () => {
-  it("語彙は既存問題の正解の語句を重複回避のために渡す", () => {
+  it("[GEN-04] 語彙は既存問題の正解の語句を重複回避のために渡す", () => {
     const existing = [{ title: undefined, questions: [{ stem: "I ( ) him.", choices: ["met", "a", "b", "c"], answerIndex: 0 }] }] as unknown as Item[];
     const { user } = buildGenerationPrompt({ type: "vocab", count: 2, topics: ["旅行", "健康"], existing });
     expect(user).toContain("2問");
