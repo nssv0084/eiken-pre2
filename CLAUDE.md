@@ -9,6 +9,9 @@
 - 変更は `npm run verify` が通ってから完了とする。UI を変えたら実際に画面で確認する。
 - 破壊的な操作（デプロイ、データ削除、force push）は実行前にユーザーへ確認する。
 
+## スキル（.claude/skills）
+- `/review-pr` — PR を作る前に、この変更をプロジェクト固有の観点（要件との対応、認可、インフラ、生成プロンプト、画面）でレビューする。汎用のバグ検出は `/code-review`。
+
 ## hooks（.claude/hooks、.claude/settings.json）
 - guard-bash: force push、--no-verify、スタックの destroy、別プロファイルでの aws/cdk、シークレット値の取得を止める。コマンド全文を見るので、ヒアドキュメントに該当の文字列が入っていても止まる。ファイルは Write ツールで書く。
 - guard-secrets: アクセスキー・API キー・秘密鍵に見える文字列のファイル書き込みを止める。テストで使う偽のキーは文字列を結合して作る。
