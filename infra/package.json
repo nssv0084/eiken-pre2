@@ -10,7 +10,8 @@
     "bootstrap": "npm run check-account && cdk bootstrap --profile eiken",
     "deploy": "npm run check-account && cdk deploy EikenCert EikenApp --profile eiken --require-approval broadening",
     "deploy:ci": "cdk deploy EikenCert EikenApp --require-approval broadening --ci",
-    "deploy:github": "npm run check-account && cdk deploy EikenGithub --profile eiken"
+    "deploy:github": "npm run check-account && cdk deploy EikenGithub --profile eiken",
+    "test": "vitest run"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.273.0",
@@ -21,6 +22,7 @@
     "aws-cdk": "^2.1145.0",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
   }
 }
