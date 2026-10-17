@@ -1,7 +1,7 @@
 import { getCurrentUser, signOut } from "aws-amplify/auth";
 import { useEffect, useState } from "react";
-import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
+import { Shell } from "./Shell";
 
 type AuthState = "loading" | "signedOut" | "signedIn";
 
@@ -21,5 +21,5 @@ export function App() {
 
   if (state === "loading") return <p className="page muted">読み込み中…</p>;
   if (state === "signedOut") return <Login onSignedIn={() => setState("signedIn")} />;
-  return <Home onSignOut={handleSignOut} />;
+  return <Shell onSignOut={handleSignOut} />;
 }

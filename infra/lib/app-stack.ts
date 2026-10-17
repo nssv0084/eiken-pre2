@@ -19,6 +19,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 import type { Construct } from "constructs";
@@ -95,20 +96,51 @@ export class AppStack extends Stack {
       description: "生徒",
     });
 
-    // ---------- API ----------
-    const apiFn = new NodejsFunction(this, "ApiFn", {
-      entry: path.join(repoRoot, "backend/src/api.ts"),
+    // ---------- 問題の生成 ----------
+    // 値は手動で登録する: aws secretsmanager put-secret-value --secret-id eiken/anthropic-api-key ...
+    const anthropicSecret = new secretsmanager.Secret(this, "AnthropicApiKey", {
+      secretName: "eiken/anthropic-api-key",
+      description: "Anthropic API キー（問題の生成と検証に使用）",
+    });
+
+    const commonFnProps = {
       handler: "handler",
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
       memorySize: 512,
-      timeout: Duration.seconds(10),
       projectRoot: repoRoot,
       depsLockFilePath: path.join(repoRoot, "package-lock.json"),
       bundling: { minify: true, sourceMap: true, target: "node22" },
+    };
+
+    const generatorFn = new NodejsFunction(this, "GeneratorFn", {
+      ...commonFnProps,
+      entry: path.join(repoRoot, "backend/src/generator.ts"),
+      timeout: Duration.minutes(15),
+      // 失敗時に自動で再実行すると二重に課金されるため、再試行しない
+      retryAttempts: 0,
+      environment: {
+        TABLE_NAME: table.tableName,
+        ANTHROPIC_SECRET_ID: anthropicSecret.secretName,
+        NODE_OPTIONS: "--enable-source-maps",
+      },
+      logGroup: new logs.LogGroup(this, "GeneratorFnLogs", {
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy: RemovalPolicy.DESTROY,
+      }),
+    });
+    table.grantReadWriteData(generatorFn);
+    anthropicSecret.grantRead(generatorFn);
+
+    // ---------- API ----------
+    const apiFn = new NodejsFunction(this, "ApiFn", {
+      ...commonFnProps,
+      entry: path.join(repoRoot, "backend/src/api.ts"),
+      timeout: Duration.seconds(10),
       environment: {
         TABLE_NAME: table.tableName,
         USER_POOL_ID: userPool.userPoolId,
+        GENERATOR_FN_NAME: generatorFn.functionName,
         NODE_OPTIONS: "--enable-source-maps",
       },
       logGroup: new logs.LogGroup(this, "ApiFnLogs", {
@@ -117,6 +149,7 @@ export class AppStack extends Stack {
       }),
     });
     table.grantReadWriteData(apiFn);
+    generatorFn.grantInvoke(apiFn);
 
     const httpApi = new apigw.HttpApi(this, "HttpApi", {
       corsPreflight: {
@@ -237,5 +270,6 @@ export class AppStack extends Stack {
     new CfnOutput(this, "UserPoolId", { value: userPool.userPoolId });
     new CfnOutput(this, "UserPoolClientId", { value: userPoolClient.userPoolClientId });
     new CfnOutput(this, "TableName", { value: table.tableName });
+    new CfnOutput(this, "AnthropicSecretName", { value: anthropicSecret.secretName });
   }
 }

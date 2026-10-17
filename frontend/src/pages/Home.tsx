@@ -1,30 +1,7 @@
-import { useEffect, useState } from "react";
-import type { DayPlan } from "../../../shared/curriculum";
-import { QUESTION_TYPE_LABELS, type UserProfile } from "../../../shared/types";
-import { api } from "../api";
+import { isPassageType, QUESTION_TYPE_LABELS } from "../../../shared/types";
+import type { MeResponse } from "../Shell";
 
-interface MeResponse {
-  profile: UserProfile;
-  today: DayPlan;
-  completedDays: number;
-}
-
-const slotLabel = (type: keyof typeof QUESTION_TYPE_LABELS, count: number, passage: boolean) =>
-  `${QUESTION_TYPE_LABELS[type]} ${count}${passage ? "題" : "問"}`;
-
-export function Home({ onSignOut }: { onSignOut: () => void }) {
-  const [me, setMe] = useState<MeResponse>();
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    api<MeResponse>("GET", "/me")
-      .then(setMe)
-      .catch((e: Error) => setError(e.message));
-  }, []);
-
-  if (error) return <p className="page error">{error}</p>;
-  if (!me) return <p className="page muted">読み込み中…</p>;
-
+export function Home({ me, onSignOut }: { me: MeResponse; onSignOut: () => void }) {
   const { profile, today } = me;
   return (
     <main className="page narrow stack">
@@ -40,7 +17,10 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
         <h2>{today.phase}</h2>
         <ul className="list">
           {today.slots.map((s, i) => (
-            <li key={i}>{slotLabel(s.type, s.count, s.type === "cloze" || s.type === "reading")}</li>
+            <li key={i}>
+              {QUESTION_TYPE_LABELS[s.type]} {s.count}
+              {isPassageType(s.type) ? "題" : "問"}
+            </li>
           ))}
           {today.reviewMax > 0 && <li>復習 最大{today.reviewMax}問</li>}
         </ul>

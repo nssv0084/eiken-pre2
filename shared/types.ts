@@ -102,6 +102,34 @@ export interface UserProfile {
   createdAt: string;
 }
 
+export type JobStatus = "queued" | "running" | "done" | "error";
+
+export interface GenerateJob {
+  id: string;
+  grade: Grade;
+  type: QuestionType;
+  genre?: PassageGenre;
+  topic?: string;
+  count: number;
+  status: JobStatus;
+  approved: number;
+  review: number;
+  rejected: number;
+  usd: number;
+  error?: string;
+  requestedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UsageSummary {
+  totalUsd: number;
+  totalJpy: number;
+  budgetJpy: number;
+  stopAtJpy: number;
+  canGenerate: boolean;
+}
+
 export interface Settings {
   budgetJpy: number;
   usdJpy: number;
