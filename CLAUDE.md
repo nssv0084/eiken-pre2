@@ -9,6 +9,11 @@
 - 変更は `npm run verify` が通ってから完了とする。UI を変えたら実際に画面で確認する。
 - 破壊的な操作（デプロイ、データ削除、force push）は実行前にユーザーへ確認する。
 
+## hooks（.claude/hooks、.claude/settings.json）
+- guard-bash: force push、--no-verify、スタックの destroy、別プロファイルでの aws/cdk、シークレット値の取得を止める。コマンド全文を見るので、ヒアドキュメントに該当の文字列が入っていても止まる。ファイルは Write ツールで書く。
+- guard-secrets: アクセスキー・API キー・秘密鍵に見える文字列のファイル書き込みを止める。テストで使う偽のキーは文字列を結合して作る。
+- hooks に止められたら迂回せず、理由をユーザーに伝えて指示を待つ。個人の許可ルールは .claude/settings.local.json（Git に含めない）に置く。
+
 ## コマンド
 - `npm run verify` — 型チェック + ビルド + テスト + 要件トレース（CI と同じ）
 - `npm run trace` — 要件とテストの対応表。テストのない要件の一覧が出る。存在しない番号を参照すると失敗する
