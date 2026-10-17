@@ -238,6 +238,21 @@ select,
   color: var(--primary);
 }
 
+.checks {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.checks dt {
+  color: var(--muted);
+}
+
+.checks dd {
+  margin: 0;
+}
+
 .explanation {
   margin: 0;
   padding: 8px 12px;

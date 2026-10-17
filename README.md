@@ -6,6 +6,10 @@
 - 画面一覧: [docs/screens.md](docs/screens.md)
 - データ設計: [docs/data-model.md](docs/data-model.md)
 
+## クレジット
+
+問題の語彙レベル判定に『CEFR-J Wordlist Version 1.6』東京外国語大学投野由紀夫研究室 を利用しています（`backend/src/lib/level/cefrj-data.ts` は ALL_sep シートから見出し語と最も低い CEFR レベルを抜き出したもの）。利用条件: https://www.cefr-j.org/download.html
+
 ## 構成
 
 | ディレクトリ | 内容 |

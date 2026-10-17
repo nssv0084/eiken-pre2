@@ -5,7 +5,17 @@ import { z } from "zod";
 import { QUESTION_TYPES, type ItemStatus, type QuestionType } from "../../shared/types";
 import type { Caller } from "./lib/auth";
 import { HttpError, parseBody } from "./lib/http";
-import { countItems, ITEM_STATUSES, listItems } from "./lib/items";
+import {
+  CALIBRATION_TARGET,
+  countItems,
+  getItem,
+  getTeacherApprovedCount,
+  incrementTeacherApproved,
+  ITEM_STATUSES,
+  listItems,
+  putItem,
+  setExemplar,
+} from "./lib/items";
 import { createJob, listJobs, type GenerateJob } from "./lib/jobs";
 import { ESTIMATED_USD_PER_ITEM } from "./lib/pricing";
 import { getSettings } from "./lib/settings";
@@ -34,7 +44,47 @@ export async function getStock() {
   );
   const stock = Object.fromEntries(QUESTION_TYPES.map((t) => [t, {} as Record<ItemStatus, number>]));
   for (const e of entries) stock[e.type][e.status] = e.count;
-  return { stock };
+  const calibration = Object.fromEntries(
+    await Promise.all(
+      QUESTION_TYPES.map(async (t) => [
+        t,
+        { approved: await getTeacherApprovedCount("pre2", t), target: CALIBRATION_TARGET[t] },
+      ]),
+    ),
+  );
+  return { stock, calibration };
+}
+
+const ReviewRequest = z.object({
+  status: z.enum(["approved", "disabled"]).optional(),
+  exemplar: z.boolean().optional(),
+});
+
+export async function reviewItem(caller: Caller, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const id = event.pathParameters?.id ?? "";
+  const parsed = ReviewRequest.safeParse(parseBody(event.body, event.isBase64Encoded));
+  if (!parsed.success) throw new HttpError(400, "入力が正しくありません");
+  const req = parsed.data;
+
+  const item = await getItem(id);
+  if (!item) throw new HttpError(404, "問題が見つかりません");
+
+  const status = req.status ?? item.status;
+  const exemplar = status === "disabled" ? false : (req.exemplar ?? item.exemplar ?? false);
+  if (exemplar && status !== "approved") throw new HttpError(400, "見本にできるのは承認した問題だけです");
+
+  const updated = {
+    ...item,
+    status,
+    exemplar,
+    reviewedBy: caller.username,
+    reviewedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  await putItem(updated);
+  if (status === "approved" && !item.reviewedBy) await incrementTeacherApproved(item.grade, item.type);
+  if (exemplar !== (item.exemplar ?? false)) await setExemplar(updated, exemplar);
+  return { item: updated };
 }
 
 export async function getItems(event: APIGatewayProxyEventV2WithJWTAuthorizer) {

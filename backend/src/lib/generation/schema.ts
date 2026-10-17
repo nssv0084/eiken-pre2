@@ -11,6 +11,9 @@ export const GenQuestionSchema = z.object({
 
 export const GenItemSchema = z.object({
   topic: z.string().describe("題材（日本語で短く）"),
+  focus: z
+    .enum(["word", "idiom", "grammar", "none"])
+    .describe("語彙問題の観点（word=単語, idiom=熟語・句動詞, grammar=文法・語法）。語彙問題以外は none"),
   title: z.string().describe("長文のタイトル。Eメールは件名。語彙・会話文は空文字"),
   passage: z.string().describe("長文の本文（英語）。語彙・会話文は空文字"),
   questions: z.array(GenQuestionSchema),
@@ -33,6 +36,7 @@ export function validateGenItem(item: GenItem, type: QuestionType, genre?: Passa
   const isPassage = type === "cloze" || type === "reading";
   if (isPassage && item.passage.trim().length < 300) return "本文が短すぎます";
   if (!isPassage && item.passage.trim() !== "") return "語彙・会話文に本文があります";
+  if (type === "vocab" && item.focus === "none") return "語彙問題の観点（focus）がありません";
 
   for (const [i, q] of item.questions.entries()) {
     if (q.choices.length !== 4) return `設問${i + 1}の選択肢が4つではありません`;

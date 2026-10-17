@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { Item, ItemStatus, QuestionType } from "../../../../shared/types";
 import { callStructured, ClaudeOutputError } from "../claude";
-import { putItem, recentDeliverableItems } from "../items";
+import {
+  CALIBRATION_TARGET,
+  countItems,
+  getTeacherApprovedCount,
+  listExemplars,
+  putItem,
+  recentItemsForDedup,
+} from "../items";
+import { checkItemLevel } from "../level/check";
 import { getJob, updateJob, type GenerateJob } from "../jobs";
 import { getSettings } from "../settings";
 import { getUsageSummary } from "../usage";
@@ -28,6 +36,7 @@ function toItem(gen: GenItem, job: GenerateJob, model: string, now: string): Ite
     grade: job.grade,
     type: job.type,
     status: "pending",
+    focus: job.type === "vocab" && gen.focus !== "none" ? gen.focus : undefined,
     genre: job.type === "reading" ? job.genre : undefined,
     title: gen.title || undefined,
     passage: gen.passage || undefined,
@@ -65,18 +74,28 @@ export async function runJob(jobId: string): Promise<void> {
   const maxCalls = Math.ceil(job.count / PER_CALL[job.type]) * 2 + 1;
 
   try {
+    // 講師の承認数と確認待ちの数の合計が目標に届くまでは、合格した問題をすべて確認待ちにする
+    let calibrationSlots =
+      CALIBRATION_TARGET[job.type] -
+      (await getTeacherApprovedCount(job.grade, job.type)) -
+      (await countItems(job.grade, job.type, "review"));
+    const exemplars = (await listExemplars(job.grade, job.type))
+      .filter((e) => job.type !== "reading" || e.genre === job.genre)
+      .slice(0, job.type === "cloze" || job.type === "reading" ? 1 : 5);
+    const existing = await recentItemsForDedup(job.grade, job.type, EXISTING_FOR_PROMPT[job.type]);
+
     for (let call = 0; call < maxCalls && accepted() < job.count; call++) {
       const usage = await getUsageSummary(settings);
       if (!usage.canGenerate) throw new Error(`API 使用額が予算の上限（${usage.stopAtJpy}円）に達したため停止しました`);
 
       const n = Math.min(PER_CALL[job.type], job.count - accepted());
-      const existing = await recentDeliverableItems(job.grade, job.type, EXISTING_FOR_PROMPT[job.type]);
       const prompt = buildGenerationPrompt({
         type: job.type,
         count: n,
         topics: pickTopics(n, job.topic),
         genre: job.genre,
         existing,
+        exemplars,
       });
 
       let generated: GenItem[];
@@ -107,7 +126,26 @@ export async function runJob(jobId: string): Promise<void> {
           counts.rejected++;
           continue;
         }
-        candidates.push(toItem(gen, job, settings.generationModel, now));
+        const item = toItem(gen, job, settings.generationModel, now);
+        // 同じジョブの次の呼び出しで同じ問題を作らないよう、合否にかかわらず重複回避の一覧の先頭に加える
+        existing.unshift(item);
+        item.level = checkItemLevel(item);
+        // 語彙リストで明らかにレベル外なら、AI 検証の費用をかけずに無効にする
+        if (item.level.verdict === "fail") {
+          counts.rejected++;
+          await putItem({
+            ...item,
+            status: "disabled",
+            verification: {
+              passed: false,
+              model: "cefr-j",
+              notes: `語彙レベル: ${item.level.notes.join(" / ")}`,
+              verifiedAt: now,
+            },
+          });
+          continue;
+        }
+        candidates.push(item);
       }
 
       const verified = await mapLimit(candidates, VERIFY_CONCURRENCY, async (item) => {
@@ -123,11 +161,17 @@ export async function runJob(jobId: string): Promise<void> {
         counts.usd += outcome.usd;
         let status: ItemStatus = "disabled";
         if (outcome.passed && accepted() < job.count) {
-          status = Math.random() < settings.spotCheckRate ? "review" : "approved";
+          if (outcome.needsReview || item.level?.verdict === "review" || calibrationSlots > 0) {
+            status = "review";
+            calibrationSlots--;
+          } else {
+            status = Math.random() < settings.spotCheckRate ? "review" : "approved";
+          }
         }
         await putItem({
           ...item,
           status,
+          difficulty: outcome.difficulty,
           verification: {
             passed: outcome.passed,
             model: settings.verificationModel,

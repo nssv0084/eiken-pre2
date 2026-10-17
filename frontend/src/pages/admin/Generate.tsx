@@ -19,6 +19,7 @@ interface UsageResponse {
 }
 
 type Stock = Record<QuestionType, Partial<Record<ItemStatus, number>>>;
+type Calibration = Record<QuestionType, { approved: number; target: number }>;
 
 const JOB_STATUS_LABELS: Record<GenerateJob["status"], string> = {
   queued: "待機中",
@@ -35,6 +36,7 @@ const formatDateTime = (iso: string) =>
 export function Generate() {
   const [usage, setUsage] = useState<UsageResponse>();
   const [stock, setStock] = useState<Stock>();
+  const [calibration, setCalibration] = useState<Calibration>();
   const [jobs, setJobs] = useState<GenerateJob[]>([]);
   const [type, setType] = useState<QuestionType>("vocab");
   const [genre, setGenre] = useState<"email" | "explanation">("email");
@@ -48,11 +50,12 @@ export function Generate() {
     try {
       const [u, s, j] = await Promise.all([
         api<UsageResponse>("GET", "/admin/usage"),
-        api<{ stock: Stock }>("GET", "/admin/stock"),
+        api<{ stock: Stock; calibration: Calibration }>("GET", "/admin/stock"),
         api<{ jobs: GenerateJob[] }>("GET", "/admin/jobs"),
       ]);
       setUsage(u);
       setStock(s.stock);
+      setCalibration(s.calibration);
       setJobs(j.jobs);
     } catch (e) {
       setError((e as Error).message);
@@ -71,7 +74,7 @@ export function Generate() {
     return () => clearInterval(timer);
   }, [hasActiveJob, refresh]);
 
-  if (!usage || !stock) return <p className="page muted">{error || "読み込み中…"}</p>;
+  if (!usage || !stock || !calibration) return <p className="page muted">{error || "読み込み中…"}</p>;
 
   const max = usage.maxPerJob[type];
   const safeCount = Math.min(Math.max(1, count), max);
@@ -131,11 +134,13 @@ export function Generate() {
               <th>うち確認待ち</th>
               <th>報告あり</th>
               <th>無効</th>
+              <th>講師の承認</th>
             </tr>
           </thead>
           <tbody>
             {QUESTION_TYPES.map((t) => {
               const s = stock[t];
+              const c = calibration[t];
               return (
                 <tr key={t}>
                   <td>{QUESTION_TYPE_LABELS[t]}</td>
@@ -143,11 +148,17 @@ export function Generate() {
                   <td>{s.review ?? 0}</td>
                   <td>{s.reported ?? 0}</td>
                   <td>{s.disabled ?? 0}</td>
+                  <td className={c.approved < c.target ? "error" : undefined}>
+                    {c.approved} / {c.target}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+        <p className="muted small">
+          講師の承認が目標数に届くまでは、AI検証に合格した問題もすべて「確認待ち」になります（難しさの基準合わせのため）。
+        </p>
       </section>
 
       <form className="card stack" onSubmit={handleSubmit}>

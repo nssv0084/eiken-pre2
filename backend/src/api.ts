@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { completedDays, getDayPlan } from "../../shared/curriculum";
-import { getItems, getJobs, getStock, getUsage, startGeneration } from "./admin";
+import { getItems, getJobs, getStock, getUsage, reviewItem, startGeneration } from "./admin";
 import { getCaller, requireTeacher, type Caller } from "./lib/auth";
 import { HttpError, json } from "./lib/http";
 import { getOrCreateProfile } from "./lib/profiles";
@@ -22,6 +22,7 @@ const handlers: Record<RouteKey, Handler> = {
   },
   "GET /admin/stock": async () => json(200, await getStock()),
   "GET /admin/items": async (_c, event) => json(200, await getItems(event)),
+  "PUT /admin/items/{id}": async (caller, event) => json(200, await reviewItem(caller, event)),
   "POST /admin/generate": async (caller, event) => json(202, await startGeneration(caller, event)),
   "GET /admin/jobs": async () => json(200, await getJobs()),
   "GET /admin/usage": async () => json(200, await getUsage()),

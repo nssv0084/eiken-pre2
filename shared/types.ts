@@ -39,12 +39,31 @@ export interface Verification {
   verifiedAt: string;
 }
 
+// 語彙問題の出題の観点
+export type VocabFocus = "word" | "idiom" | "grammar";
+
+export interface LevelCheck {
+  verdict: "pass" | "review" | "fail";
+  notes: string[];
+  answerLevel?: string;
+  distractorLevels?: string[];
+  aboveB1Rate?: number;
+  hardWords?: string[];
+  tokens?: number;
+}
+
 // 出題単位。語彙・会話文は設問1つ、長文型は本文1つに設問が複数
 export interface Item {
   id: string;
   grade: Grade;
   type: QuestionType;
   status: ItemStatus;
+  focus?: VocabFocus;
+  level?: LevelCheck;
+  difficulty?: number;
+  exemplar?: boolean;
+  reviewedBy?: string;
+  reviewedAt?: string;
   genre?: PassageGenre;
   title?: string;
   passage?: string;

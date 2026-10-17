@@ -32,6 +32,10 @@ export function Home({ me, onSignOut }: { me: MeResponse; onSignOut: () => void 
       <button className="btn" onClick={onSignOut}>
         ログアウト
       </button>
+
+      <footer className="muted small">
+        問題の語彙レベル判定に『CEFR-J Wordlist Version 1.6』東京外国語大学投野由紀夫研究室 を利用しています。
+      </footer>
     </main>
   );
 }

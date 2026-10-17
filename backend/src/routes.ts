@@ -3,6 +3,7 @@ export const ROUTE_KEYS = [
   "GET /me",
   "GET /admin/stock",
   "GET /admin/items",
+  "PUT /admin/items/{id}",
   "POST /admin/generate",
   "GET /admin/jobs",
   "GET /admin/usage",
