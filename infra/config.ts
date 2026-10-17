@@ -12,6 +12,8 @@ export const config = {
   // 予算アラートと Lambda のエラー通知の送り先。空なら通知を作らない
   alertEmail: "ikehiroki@gmail.com",
   monthlyBudgetUsd: 10,
+  // GitHub Actions のデプロイを許可するリポジトリ（owner/name）
+  githubRepo: "nssv0084/eiken-pre2",
 };
 
 export type AppConfig = typeof config;
