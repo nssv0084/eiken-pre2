@@ -20,7 +20,7 @@ export class GithubStack extends Stack {
       assumedBy: new iam.WebIdentityPrincipal(provider.openIdConnectProviderArn, {
         StringEquals: {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": `repo:${config.githubRepo}:environment:production`,
+          "token.actions.githubusercontent.com:sub": `${config.githubSubjectPrefix}:environment:production`,
         },
       }),
     });
