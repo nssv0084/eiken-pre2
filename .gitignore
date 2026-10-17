@@ -1,0 +1,7 @@
+node_modules/
+dist/
+cdk.out/
+*.log
+.env*
+!.env.example
+frontend/public/config.json
