@@ -6,7 +6,7 @@ export const GenQuestionSchema = z.object({
   choices: z.array(z.string()).describe("選択肢ちょうど4つ（英語）"),
   // .int() を付けると説明文に不要な範囲が付くため、整数チェックは validateGenItem で行う
   answerIndex: z.number().describe("正解の選択肢の位置（0〜3の整数）"),
-  explanation: z.string().describe("日本語の解説。選択肢は番号ではなく語句で言及する"),
+  explanation: z.string().describe("日本語の解説。英文や語句には英訳（日本語訳）を多く添える。選択肢は番号ではなく語句で言及する"),
 });
 
 export const GenItemSchema = z.object({
