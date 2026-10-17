@@ -227,6 +227,7 @@ export interface Settings {
   budgetJpy: number;
   usdJpy: number;
   inactiveAlertDays: number;
+  stockAlertDays: number;
   spotCheckRate: number;
   generationModel: string;
   verificationModel: string;
@@ -236,6 +237,7 @@ export const DEFAULT_SETTINGS: Settings = {
   budgetJpy: 5000,
   usdJpy: 150,
   inactiveAlertDays: 3,
+  stockAlertDays: 7,
   spotCheckRate: 0.1,
   generationModel: "claude-opus-5-5",
   verificationModel: "claude-opus-5-5",
