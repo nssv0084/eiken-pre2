@@ -4,7 +4,10 @@ import { createRoot } from "react-dom/client";
 import { setApiUrl } from "./api";
 import { App } from "./App";
 import { loadConfig } from "./config";
+import { registerServiceWorker } from "./push";
 import "./styles.css";
+
+registerServiceWorker();
 
 const root = createRoot(document.getElementById("root")!);
 

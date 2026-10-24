@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Item } from "../../shared/types";
+import type { Item, UserProfile } from "../../shared/types";
 import { usageFlag } from "../src/lib/study/feedback";
 import { selectItems } from "../src/lib/study/select";
 import { nextQuestionState, type QuestionState } from "../src/lib/study/srs";
@@ -85,5 +85,32 @@ describe("usageFlag（正答率による見直し）", () => {
     expect(usageFlag(10, 10)).toMatch("易しすぎる");
     expect(usageFlag(10, 2)).toMatch("難しすぎる");
     expect(usageFlag(10, 6)).toBeNull();
+  });
+});
+
+describe("講師の生徒一覧", () => {
+  it("[STK-17] 通知の登録がある生徒は通知オンとし、登録の中身は返さない", async () => {
+    const { summarizeStudent } = await import("../src/lib/study/summary");
+    const { DEFAULT_SETTINGS } = await import("../../shared/types");
+    const base = {
+      sub: "s1",
+      username: "taro",
+      nickname: "たろう",
+      role: "student",
+      grade: "pre2",
+      startDate: "2026-10-01",
+      progress: { cycle: 1, day: 5 },
+      streak: { count: 0 },
+      stats: {},
+      createdAt: "2026-10-01T00:00:00Z",
+    } as unknown as UserProfile;
+    const on = summarizeStudent(
+      { ...base, pushSubscriptions: [{ endpoint: "https://fcm.googleapis.com/x", keys: { p256dh: "p", auth: "a" }, createdAt: "" }] },
+      DEFAULT_SETTINGS,
+      "2026-10-24",
+    );
+    expect(on.pushEnabled).toBe(true);
+    expect(JSON.stringify(on)).not.toContain("fcm.googleapis.com");
+    expect(summarizeStudent(base, DEFAULT_SETTINGS, "2026-10-24").pushEnabled).toBe(false);
   });
 });

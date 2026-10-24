@@ -21,6 +21,7 @@ export interface StudentRow {
   examDate?: string;
   daysToExam?: number;
   projection?: Projection;
+  pushEnabled: boolean;
   alerts: string[];
   enabled: boolean;
   firstLoginPending: boolean;
@@ -166,6 +167,7 @@ export function Dashboard() {
                   <th>連続</th>
                   <th>正答率</th>
                   <th>受験まで</th>
+                  <th>通知</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,6 +197,7 @@ export function Dashboard() {
                     <td>{s.streak}日</td>
                     <td>{s.total ? `${Math.round((s.correct / s.total) * 100)}%` : "-"}</td>
                     <td>{s.daysToExam !== undefined && s.daysToExam >= 0 ? `${s.daysToExam}日` : "-"}</td>
+                    <td>{s.pushEnabled ? "オン" : "-"}</td>
                   </tr>
                 ))}
               </tbody>

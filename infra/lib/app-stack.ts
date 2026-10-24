@@ -12,6 +12,8 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cwActions from "aws-cdk-lib/aws-cloudwatch-actions";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as events from "aws-cdk-lib/aws-events";
+import * as eventTargets from "aws-cdk-lib/aws-events-targets";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -132,6 +134,40 @@ export class AppStack extends Stack {
     table.grantReadWriteData(generatorFn);
     anthropicSecret.grantRead(generatorFn);
 
+    // ---------- 学習リマインダー（Web Push） ----------
+    // 鍵の組は API の Lambda が初めて使うときに作って書き込む（手動の登録は不要）
+    const vapidSecret = new secretsmanager.Secret(this, "VapidKeys", {
+      secretName: "eiken/vapid-keys",
+      description: "Web Push の VAPID 鍵（学習リマインダーの通知に使用）",
+    });
+
+    const reminderFn = new NodejsFunction(this, "ReminderFn", {
+      ...commonFnProps,
+      entry: path.join(repoRoot, "backend/src/reminder.ts"),
+      timeout: Duration.minutes(1),
+      retryAttempts: 0,
+      environment: {
+        TABLE_NAME: table.tableName,
+        USER_POOL_ID: userPool.userPoolId,
+        VAPID_SECRET_ID: vapidSecret.secretName,
+        SITE_ORIGIN: siteOrigin,
+        NODE_OPTIONS: "--enable-source-maps",
+      },
+      logGroup: new logs.LogGroup(this, "ReminderFnLogs", {
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy: RemovalPolicy.DESTROY,
+      }),
+    });
+    table.grantReadWriteData(reminderFn);
+    vapidSecret.grantRead(reminderFn);
+    userPool.grant(reminderFn, "cognito-idp:ListUsersInGroup");
+
+    // 20:00 JST = 11:00 UTC
+    new events.Rule(this, "DailyReminder", {
+      schedule: events.Schedule.cron({ minute: "0", hour: "11" }),
+      targets: [new eventTargets.LambdaFunction(reminderFn, { retryAttempts: 0 })],
+    });
+
     // ---------- API ----------
     const apiFn = new NodejsFunction(this, "ApiFn", {
       ...commonFnProps,
@@ -141,6 +177,8 @@ export class AppStack extends Stack {
         TABLE_NAME: table.tableName,
         USER_POOL_ID: userPool.userPoolId,
         GENERATOR_FN_NAME: generatorFn.functionName,
+        VAPID_SECRET_ID: vapidSecret.secretName,
+        SITE_ORIGIN: siteOrigin,
         NODE_OPTIONS: "--enable-source-maps",
       },
       logGroup: new logs.LogGroup(this, "ApiFnLogs", {
@@ -150,6 +188,8 @@ export class AppStack extends Stack {
     });
     table.grantReadWriteData(apiFn);
     generatorFn.grantInvoke(apiFn);
+    vapidSecret.grantRead(apiFn);
+    vapidSecret.grantWrite(apiFn);
     // 講師の管理画面から生徒・講師のアカウントを操作する（このユーザープールだけに限定）
     userPool.grant(
       apiFn,
@@ -253,6 +293,14 @@ export class AppStack extends Stack {
         evaluationPeriods: 1,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
         alarmDescription: "API の Lambda でエラーが発生しました",
+      }).addAlarmAction(new cwActions.SnsAction(topic));
+
+      new cloudwatch.Alarm(this, "ReminderErrors", {
+        metric: reminderFn.metricErrors({ period: Duration.hours(1) }),
+        threshold: 1,
+        evaluationPeriods: 1,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        alarmDescription: "学習リマインダーの Lambda でエラーが発生しました",
       }).addAlarmAction(new cwActions.SnsAction(topic));
 
       new budgets.CfnBudget(this, "MonthlyBudget", {

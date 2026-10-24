@@ -192,6 +192,14 @@ export interface UserProfile {
   streak: Streak;
   lastStudiedAt?: string;
   stats: Record<QuestionType, TypeStat>;
+  pushSubscriptions?: PushSubscriptionRecord[];
+  createdAt: string;
+}
+
+// ブラウザの PushSubscription（端末ごと）
+export interface PushSubscriptionRecord {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
   createdAt: string;
 }
 
