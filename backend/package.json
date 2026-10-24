@@ -13,11 +13,13 @@
     "@aws-sdk/client-lambda": "^3.1152.0",
     "@aws-sdk/client-secrets-manager": "^3.1152.0",
     "@aws-sdk/lib-dynamodb": "^3.1152.0",
+    "web-push": "^3.6.7",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.164",
     "@types/node": "^22.10.0",
+    "@types/web-push": "^3.6.4",
     "typescript": "^5.9.3",
     "vitest": "^5.0.5"
   }

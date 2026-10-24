@@ -1,7 +1,8 @@
 import { updatePassword } from "aws-amplify/auth";
 import { useState, type FormEvent } from "react";
+import { PushSettings } from "../components/PushSettings";
 
-export function UserSettings({ onSignOut }: { onSignOut: () => void }) {
+export function UserSettings({ onSignOut, isTeacher }: { onSignOut: () => void; isTeacher: boolean }) {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -37,6 +38,8 @@ export function UserSettings({ onSignOut }: { onSignOut: () => void }) {
   return (
     <main className="page narrow stack">
       <h1 className="title">設定</h1>
+
+      <PushSettings isTeacher={isTeacher} />
 
       <section className="card stack">
         <h2>ホーム画面に追加する</h2>

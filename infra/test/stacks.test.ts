@@ -75,6 +75,18 @@ describe("アプリのスタック", () => {
   it("[NFR-04] API キーはコードやテンプレートに書かれない", () => {
     expect(JSON.stringify(appT.toJSON())).not.toMatch(/sk-ant-/);
   });
+
+  it("[STK-12] 毎日20時（日本時間 = 11時 UTC）にリマインダーの Lambda を起動する", () => {
+    const rules = Object.values(appT.findResources("AWS::Events::Rule"));
+    expect(rules).toHaveLength(1);
+    expect(rules[0].Properties.ScheduleExpression).toBe("cron(0 11 * * ? *)");
+    const fns = appT.findResources("AWS::Lambda::Function", {
+      Properties: { Environment: { Variables: { VAPID_SECRET_ID: Match.anyValue(), USER_POOL_ID: Match.anyValue() } } },
+    });
+    const reminderId = Object.keys(fns).find((id) => id.startsWith("ReminderFn"));
+    expect(reminderId).toBeDefined();
+    expect(JSON.stringify(rules[0].Properties.Targets)).toContain(reminderId);
+  });
 });
 
 describe("GitHub 連携のスタック", () => {

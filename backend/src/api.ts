@@ -15,6 +15,7 @@ import {
 } from "./admin-students";
 import { getCaller, requireTeacher, type Caller } from "./lib/auth";
 import { HttpError, json } from "./lib/http";
+import { getPushKey, sendTestPush, subscribePush, unsubscribePush } from "./push-api";
 import type { RouteKey } from "./routes";
 import {
   getMe,
@@ -41,6 +42,10 @@ const handlers: Record<RouteKey, Handler> = {
   "POST /reports": async (caller, event) => json(200, await submitReport(caller, event)),
   "GET /assignments": async (caller) => json(200, await getMyAssignments(caller)),
   "GET /assignments/{id}": async (caller, event) => json(200, await getMyAssignment(caller, event)),
+  "GET /push/key": async () => json(200, await getPushKey()),
+  "PUT /push/subscription": async (caller, event) => json(200, await subscribePush(caller, event)),
+  "DELETE /push/subscription": async (caller, event) => json(200, await unsubscribePush(caller, event)),
+  "POST /push/test": async (caller) => json(200, await sendTestPush(caller)),
   "GET /admin/students": async () => json(200, await listStudents()),
   "POST /admin/students": async (_c, event) => json(201, await addStudent(event)),
   "GET /admin/students/{sub}": async (_c, event) => json(200, await getStudent(event)),

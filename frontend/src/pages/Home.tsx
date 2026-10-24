@@ -5,6 +5,7 @@ import { isPassageType, QUESTION_TYPE_LABELS, type AssignmentProgress, type Ques
 import { api } from "../api";
 import { DayTrack } from "../components/DayTrack";
 import { Icon, TYPE_ICONS } from "../components/Icon";
+import { PushPrompt } from "../components/PushSettings";
 import type { MeResponse } from "../Shell";
 
 type MyAssignment = AssignmentProgress & { id: string; title: string; type: QuestionType; dueDate: string; questionCount: number };
@@ -103,6 +104,8 @@ export function Home({ me }: { me: MeResponse }) {
           </div>
         </div>
       </section>
+
+      {profile.role === "student" && <PushPrompt />}
 
       <AssignmentCards todayDate={me.todayDate} />
 
