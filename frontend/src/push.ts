@@ -30,6 +30,12 @@ function base64UrlToBytes(s: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
+function sameKey(a: ArrayBuffer | null, b: Uint8Array): boolean {
+  if (!a) return false;
+  const x = new Uint8Array(a);
+  return x.length === b.length && x.every((v, i) => v === b[i]);
+}
+
 async function saveSubscription(sub: PushSubscription) {
   const { endpoint, keys } = sub.toJSON();
   await api("PUT", "/push/subscription", { endpoint, keys });
@@ -41,9 +47,14 @@ export async function enablePush(): Promise<PushState> {
   if (permission !== "granted") return "off";
   const reg = await navigator.serviceWorker.ready;
   const { publicKey } = await api<{ publicKey: string }>("GET", "/push/key");
-  const sub =
-    (await reg.pushManager.getSubscription()) ??
-    (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(publicKey) }));
+  const key = base64UrlToBytes(publicKey);
+  let sub = await reg.pushManager.getSubscription();
+  // サーバーの鍵が作り直されていたら、古い鍵の登録では届かないので登録し直す
+  if (sub && !sameKey(sub.options.applicationServerKey, key)) {
+    await sub.unsubscribe();
+    sub = null;
+  }
+  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
   await saveSubscription(sub);
   return "on";
 }
