@@ -90,7 +90,7 @@ export function Shell({ onSignOut }: { onSignOut: () => void }) {
           <Route path="/study" element={<Study onChanged={reload} />} />
           <Route path="/practice" element={<Practice onChanged={reload} />} />
           <Route path="/records" element={<Records />} />
-          <Route path="/settings" element={<UserSettings onSignOut={onSignOut} />} />
+          <Route path="/settings" element={<UserSettings onSignOut={onSignOut} isTeacher={me.profile.role === "teacher"} />} />
           <Route path="/assignments/:id" element={<AssignmentRun onChanged={reload} />} />
           {isTeacher && <Route path="/admin" element={<Dashboard />} />}
           {isTeacher && <Route path="/admin/students/:sub" element={<StudentDetail />} />}

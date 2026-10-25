@@ -17,6 +17,7 @@ vi.mock("../src/admin-students", () => ({
   resetStudentPassword: ok,
   saveSettings: ok,
 }));
+vi.mock("../src/push-api", () => ({ getPushKey: ok, sendTestPush: ok, subscribePush: ok, unsubscribePush: ok }));
 vi.mock("../src/student", () => ({
   getMe: ok,
   getMyAssignment: ok,

@@ -11,7 +11,7 @@
 | エンティティ | pk | sk | gsi1pk | gsi1sk | 内容 |
 |---|---|---|---|---|---|
 | 出題単位（Item） | `ITEM#{itemId}` | `META` | `ITEMS#{grade}#{type}#{status}` | `{createdAt}` | 問題本体。語彙・会話文は設問1つ、長文型は本文と設問2〜4つ |
-| ユーザー | `USER#{sub}` | `PROFILE` | `USERS#{role}` | `{username}` | ニックネーム、級、受験日、開始日、周回・日、連続学習日数、形式別の累計 |
+| ユーザー | `USER#{sub}` | `PROFILE` | `USERS#{role}` | `{username}` | ニックネーム、級、受験日、開始日、周回・日、連続学習日数、形式別の累計、通知の登録（端末ごとの送信先と鍵、最大5件） |
 | 日別の学習量 | `USER#{sub}` | `DAY#{date}` | — | — | 日別の解答数・正答数（形式別） |
 | 解答履歴 | `USER#{sub}` | `ANS#{timestamp}#{questionId}` | — | — | 1回ごとの解答（選んだ番号、正誤、どこで解いたか） |
 | 設問ごとの状態 | `USER#{sub}` | `QS#{questionId}` | `REVIEW#{sub}`（復習中のみ） | `{nextReviewDate}` | 解答回数、連続正解数、復習の予定日、最後に間違えた周回 |
@@ -37,6 +37,7 @@
 | 出題できる問題の一覧 | GSI `ITEMS#{grade}#{type}#approved` を Query |
 | 講師の確認待ち | GSI `ITEMS#{grade}#{type}#review` と `REPORTS#open` を Query |
 | 生徒一覧（講師ダッシュボード） | GSI `USERS#student` を Query（プロフィールに集計値を持たせ、1回で表示できるようにする） |
+| 学習リマインダーの送信先 | GSI `USERS#student` を Query し、プロフィールの通知の登録を使う（通知の登録は講師の画面と生徒の `GET /me` には返さない） |
 | 今日の復習 | GSI `REVIEW#{sub}` を `gsi1sk <= 今日` で Query |
 | 解いたことのある設問 | `USER#{sub}` を `begins_with(sk, "QS#")` で Query |
 | 日別グラフ | `USER#{sub}` を `begins_with(sk, "DAY#")` で Query |

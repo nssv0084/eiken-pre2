@@ -70,6 +70,7 @@ export interface StudentSummary {
   examDate?: string;
   daysToExam?: number;
   projection?: Projection;
+  pushEnabled: boolean;
   alerts: string[];
 }
 
@@ -104,6 +105,7 @@ export function summarizeStudent(profile: UserProfile, settings: Settings, today
     examDate: profile.examDate,
     daysToExam: profile.examDate ? daysBetween(today, profile.examDate) : undefined,
     projection,
+    pushEnabled: (profile.pushSubscriptions?.length ?? 0) > 0,
     alerts,
   };
 }

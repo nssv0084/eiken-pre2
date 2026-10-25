@@ -33,7 +33,7 @@ import { currentStreak, markStudied, STUDIED_DAY_MIN_ANSWERS } from "./lib/study
 import { statsForProfile } from "./lib/study/summary";
 
 export async function getMe(caller: Caller) {
-  const profile = await getOrCreateProfile(caller);
+  const { pushSubscriptions: _push, ...profile } = await getOrCreateProfile(caller);
   const today = studyDate();
   return {
     profile,

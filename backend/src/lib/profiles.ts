@@ -74,7 +74,7 @@ const emptyStats = () =>
 
 export async function updateProfile(
   sub: string,
-  fields: Partial<Pick<UserProfile, "progress" | "streak" | "examDate" | "startDate" | "nickname">>,
+  fields: Partial<Pick<UserProfile, "progress" | "streak" | "examDate" | "startDate" | "nickname" | "pushSubscriptions">>,
 ): Promise<void> {
   const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
   if (entries.length === 0) return;
