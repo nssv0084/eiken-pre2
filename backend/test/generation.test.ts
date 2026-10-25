@@ -98,4 +98,15 @@ describe("buildGenerationPrompt", () => {
     expect(user).toContain("1. 旅行");
     expect(user).toContain("（正解: met ／ 誤り: a, b, c）");
   });
+
+  it("[GEN-09] 同じ題材で複数作るときは、場面・人物・筋を変えるよう指示する", () => {
+    const { user } = buildGenerationPrompt({ type: "cloze", count: 2, topics: ["コンビニ", "コンビニ"], existing: [] });
+    expect(user).toContain("同じ題材で複数作る");
+    expect(user).toContain("場面・登場人物・話の筋");
+  });
+
+  it("[GEN-09] 題材がすべて違うとき、1つだけのときは指示を足さない", () => {
+    expect(buildGenerationPrompt({ type: "cloze", count: 2, topics: ["旅行", "健康"], existing: [] }).user).not.toContain("同じ題材で複数作る");
+    expect(buildGenerationPrompt({ type: "cloze", count: 1, topics: ["旅行"], existing: [] }).user).not.toContain("同じ題材で複数作る");
+  });
 });
