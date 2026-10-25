@@ -3,6 +3,7 @@ import { getDayPlan } from "../../../../shared/curriculum";
 import {
   QUESTION_TYPE_LABELS,
   type Item,
+  type PassageGenre,
   type PublicItem,
   type QuestionType,
   type SessionView,
@@ -11,8 +12,11 @@ import {
   type UserProfile,
 } from "../../../../shared/types";
 import { ddb, TABLE_NAME } from "../db";
+import { poolForSlot } from "./pool";
 import { selectItems } from "./select";
 import { batchGetItems, dueReviews, listDeliverableItems, loadQuestionStates } from "./store";
+
+const GENRE_SUFFIX: Partial<Record<PassageGenre, string>> = { email: "（Eメール）", explanation: "（説明文）", dialogue: "（長い会話）" };
 
 export interface SessionRecord {
   cycle: number;
@@ -58,12 +62,12 @@ export async function createSession(profile: UserProfile, today: string): Promis
 
   for (const slot of plan.slots) {
     if (!pools.has(slot.type)) pools.set(slot.type, await listDeliverableItems(profile.grade, slot.type));
-    const pool = pools.get(slot.type)!.filter((i) => !slot.genre || i.genre === slot.genre);
+    const pool = poolForSlot(pools.get(slot.type)!, slot);
     const chosen = selectItems({ items: pool, states, cycle, count: slot.count, exclude: used });
     if (chosen.length < slot.count) shortage = true;
     if (chosen.length === 0) continue;
     chosen.forEach((i) => used.add(i.id));
-    const label = QUESTION_TYPE_LABELS[slot.type] + (slot.genre === "email" ? "（Eメール）" : slot.genre === "explanation" ? "（説明文）" : "");
+    const label = QUESTION_TYPE_LABELS[slot.type] + (slot.genre ? (GENRE_SUFFIX[slot.genre] ?? "") : "");
     sets.push({
       kind: slot.type,
       label,

@@ -1,5 +1,5 @@
 import { DeleteCommand, GetCommand, PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import type { Grade, Item, ItemStatus, QuestionType } from "../../../shared/types";
+import type { Grade, Item, ItemStatus, PassageGenre, QuestionType } from "../../../shared/types";
 import { ddb, keys, TABLE_NAME } from "./db";
 
 export const ITEM_STATUSES: readonly ItemStatus[] = ["pending", "approved", "review", "reported", "disabled"];
@@ -100,6 +100,28 @@ export async function countItems(grade: Grade, type: QuestionType, status: ItemS
         IndexName: "gsi1",
         KeyConditionExpression: "gsi1pk = :pk",
         ExpressionAttributeValues: { ":pk": itemsIndexKey(grade, type, status) },
+        Select: "COUNT",
+        ExclusiveStartKey: startKey,
+      }),
+    );
+    count += res.Count ?? 0;
+    startKey = res.LastEvaluatedKey;
+  } while (startKey);
+  return count;
+}
+
+// 会話文の長い会話のように、同じ形式の中でジャンルを絞って数える
+export async function countItemsWithGenre(grade: Grade, type: QuestionType, status: ItemStatus, genre: PassageGenre): Promise<number> {
+  let count = 0;
+  let startKey: Record<string, unknown> | undefined;
+  do {
+    const res = await ddb.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "gsi1",
+        KeyConditionExpression: "gsi1pk = :pk",
+        FilterExpression: "genre = :genre",
+        ExpressionAttributeValues: { ":pk": itemsIndexKey(grade, type, status), ":genre": genre },
         Select: "COUNT",
         ExclusiveStartKey: startKey,
       }),

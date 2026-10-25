@@ -2,13 +2,14 @@ import { randomUUID } from "node:crypto";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import { z } from "zod";
-import { buildForecast, deliverableCount, MAX_PER_JOB } from "../../shared/stock";
+import { buildForecast, deliverableCount, MAX_DIALOGUE_PER_JOB, MAX_PER_JOB, type ForecastKey } from "../../shared/stock";
 import { QUESTION_TYPES, type ItemStatus, type QuestionType } from "../../shared/types";
 import type { Caller } from "./lib/auth";
 import { HttpError, parseBody } from "./lib/http";
 import {
   CALIBRATION_TARGET,
   countItems,
+  countItemsWithGenre,
   getItem,
   getTeacherApprovedCount,
   incrementTeacherApproved,
@@ -29,11 +30,14 @@ const GenerateRequest = z
   .object({
     type: z.enum(QUESTION_TYPES),
     count: z.number().int().min(1),
-    genre: z.enum(["email", "explanation"]).optional(),
+    genre: z.enum(["email", "explanation", "dialogue"]).optional(),
     topic: z.string().trim().max(50).optional(),
   })
-  .refine((r) => r.count <= MAX_PER_JOB[r.type], { message: "1回に作れる数を超えています" })
-  .refine((r) => r.type !== "reading" || r.genre, { message: "長文の内容一致はジャンルを選んでください" });
+  .refine((r) => r.count <= (r.type === "conversation" && r.genre === "dialogue" ? MAX_DIALOGUE_PER_JOB : MAX_PER_JOB[r.type]), {
+    message: "1回に作れる数を超えています",
+  })
+  .refine((r) => r.type !== "reading" || r.genre === "email" || r.genre === "explanation", { message: "長文の内容一致はジャンルを選んでください" })
+  .refine((r) => r.genre !== "dialogue" || r.type === "conversation", { message: "長い会話は会話文でだけ選べます" });
 
 export async function getStock() {
   const entries = await Promise.all(
@@ -51,10 +55,18 @@ export async function getStock() {
       ]),
     ),
   );
-  const [students, settings] = await Promise.all([listProfiles("student"), getSettings()]);
+  const [students, settings, dialogue] = await Promise.all([
+    listProfiles("student"),
+    getSettings(),
+    countItemsWithGenre("pre2", "conversation", "approved", "dialogue"),
+  ]);
+  const deliverable = Object.fromEntries(QUESTION_TYPES.map((t) => [t, deliverableCount(stock[t])])) as Record<ForecastKey, number>;
+  // 会話文の承認済みは短い会話と長い会話の合計なので、分けて見通す
+  deliverable.dialogue = dialogue;
+  deliverable.conversation -= dialogue;
   const forecast = buildForecast({
     grade: "pre2",
-    deliverable: Object.fromEntries(QUESTION_TYPES.map((t) => [t, deliverableCount(stock[t])])) as Record<QuestionType, number>,
+    deliverable,
     progresses: students.map((s) => s.progress),
     alertDays: settings.stockAlertDays,
   });
@@ -114,7 +126,7 @@ export async function startGeneration(caller: Caller, event: APIGatewayProxyEven
     id: randomUUID(),
     grade: "pre2",
     type: req.type,
-    genre: req.type === "reading" ? req.genre : undefined,
+    genre: req.type === "reading" || (req.type === "conversation" && req.genre === "dialogue") ? req.genre : undefined,
     topic: req.topic || undefined,
     count: req.count,
     status: "queued",
@@ -148,6 +160,7 @@ export async function getUsage() {
     usdJpy: settings.usdJpy,
     estimatedUsdPerItem: ESTIMATED_USD_PER_ITEM,
     maxPerJob: MAX_PER_JOB,
+    maxDialoguePerJob: MAX_DIALOGUE_PER_JOB,
     models: { generation: settings.generationModel, verification: settings.verificationModel },
   };
 }

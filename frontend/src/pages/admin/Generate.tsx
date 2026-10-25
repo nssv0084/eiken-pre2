@@ -15,6 +15,7 @@ interface UsageResponse {
   usdJpy: number;
   estimatedUsdPerItem: Record<QuestionType, number>;
   maxPerJob: Record<QuestionType, number>;
+  maxDialoguePerJob: number;
   models: { generation: string; verification: string };
 }
 
@@ -28,7 +29,7 @@ const JOB_STATUS_LABELS: Record<GenerateJob["status"], string> = {
   error: "エラー",
 };
 
-const GENRE_LABELS = { email: "Eメール", explanation: "説明文" } as const;
+const GENRE_LABELS = { email: "Eメール", explanation: "説明文", dialogue: "長い会話" } as const;
 
 const formatDateTime = (iso: string) =>
   new Date(iso).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -40,6 +41,7 @@ export function Generate() {
   const [jobs, setJobs] = useState<GenerateJob[]>([]);
   const [type, setType] = useState<QuestionType>("vocab");
   const [genre, setGenre] = useState<"email" | "explanation">("email");
+  const [conversationKind, setConversationKind] = useState<"short" | "dialogue">("short");
   const [count, setCount] = useState(10);
   const [topic, setTopic] = useState("");
   const [busy, setBusy] = useState(false);
@@ -76,10 +78,12 @@ export function Generate() {
 
   if (!usage || !stock || !calibration) return <p className="page muted">{error || "読み込み中…"}</p>;
 
-  const max = usage.maxPerJob[type];
+  const isDialogue = type === "conversation" && conversationKind === "dialogue";
+  const max = isDialogue ? usage.maxDialoguePerJob : usage.maxPerJob[type];
   const safeCount = Math.min(Math.max(1, count), max);
-  const estimateJpy = Math.ceil(usage.estimatedUsdPerItem[type] * safeCount * usage.usdJpy);
-  const unit = isPassageType(type) ? "題" : "問";
+  // 長い会話の費用は、本文と設問2つを持つ長文空所と同じくらいとみなす
+  const estimateJpy = Math.ceil(usage.estimatedUsdPerItem[isDialogue ? "cloze" : type] * safeCount * usage.usdJpy);
+  const unit = isPassageType(type) || isDialogue ? "題" : "問";
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -90,7 +94,7 @@ export function Generate() {
       await api("POST", "/admin/generate", {
         type,
         count: safeCount,
-        genre: type === "reading" ? genre : undefined,
+        genre: type === "reading" ? genre : isDialogue ? "dialogue" : undefined,
         topic: topic.trim() || undefined,
       });
       setMessage("生成を開始しました。数分かかります。");
@@ -180,6 +184,22 @@ export function Generate() {
             ))}
           </select>
         </label>
+        {type === "conversation" && (
+          <label className="field">
+            <span>種類</span>
+            <select
+              value={conversationKind}
+              onChange={(e) => {
+                const kind = e.target.value as "short" | "dialogue";
+                setConversationKind(kind);
+                if (kind === "dialogue") setCount(Math.min(count, usage.maxDialoguePerJob));
+              }}
+            >
+              <option value="short">短い会話（4発言・設問1問）</option>
+              <option value="dialogue">長い会話（6〜9発言・設問2問）</option>
+            </select>
+          </label>
+        )}
         {type === "reading" && (
           <label className="field">
             <span>ジャンル</span>

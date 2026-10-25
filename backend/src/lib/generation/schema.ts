@@ -15,7 +15,7 @@ export const GenItemSchema = z.object({
     .enum(["word", "idiom", "grammar", "none"])
     .describe("語彙問題の観点（word=単語, idiom=熟語・句動詞, grammar=文法・語法）。語彙問題以外は none"),
   title: z.string().describe("長文のタイトル。Eメールは件名。語彙・会話文は空文字"),
-  passage: z.string().describe("長文の本文（英語）。語彙・会話文は空文字"),
+  passage: z.string().describe("長文の本文、または長い会話の会話文（英語）。語彙・短い会話は空文字"),
   questions: z.array(GenQuestionSchema),
 });
 
@@ -26,6 +26,7 @@ export type GenItem = z.infer<typeof GenItemSchema>;
 export function expectedQuestionCount(type: QuestionType, genre?: PassageGenre): number {
   if (type === "cloze") return 2;
   if (type === "reading") return genre === "email" ? 3 : 4;
+  if (type === "conversation" && genre === "dialogue") return 2;
   return 1;
 }
 
@@ -34,8 +35,10 @@ export function validateGenItem(item: GenItem, type: QuestionType, genre?: Passa
   const expected = expectedQuestionCount(type, genre);
   if (item.questions.length !== expected) return `設問数が${expected}ではありません`;
   const isPassage = type === "cloze" || type === "reading";
+  const isDialogue = type === "conversation" && genre === "dialogue";
   if (isPassage && item.passage.trim().length < 300) return "本文が短すぎます";
-  if (!isPassage && item.passage.trim() !== "") return "語彙・会話文に本文があります";
+  if (isDialogue && item.passage.trim().length < 50) return "長い会話の本文（会話）がありません";
+  if (!isPassage && !isDialogue && item.passage.trim() !== "") return "語彙・短い会話に本文があります";
   if (type === "vocab" && item.focus === "none") return "語彙問題の観点（focus）がありません";
 
   for (const [i, q] of item.questions.entries()) {
@@ -45,8 +48,8 @@ export function validateGenItem(item: GenItem, type: QuestionType, genre?: Passa
     if (new Set(normalized).size !== 4) return `設問${i + 1}の選択肢が重複しています`;
     if (!Number.isInteger(q.answerIndex) || q.answerIndex < 0 || q.answerIndex > 3) return `設問${i + 1}の正解番号が不正です`;
     if (q.explanation.trim() === "") return `設問${i + 1}に解説がありません`;
-    if ((type === "vocab" || type === "conversation") && !q.stem.includes("( )")) return "問題文に空所 ( ) がありません";
-    if (type === "cloze" && !item.passage.includes(`( ${i + 1} )`)) return `本文に空所 ( ${i + 1} ) がありません`;
+    if ((type === "vocab" || (type === "conversation" && !isDialogue)) && !q.stem.includes("( )")) return "問題文に空所 ( ) がありません";
+    if ((type === "cloze" || isDialogue) && !item.passage.includes(`( ${i + 1} )`)) return `本文に空所 ( ${i + 1} ) がありません`;
   }
   return null;
 }

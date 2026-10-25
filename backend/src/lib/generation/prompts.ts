@@ -72,6 +72,15 @@ const TYPE_INSTRUCTIONS: Record<QuestionType, string> = {
 - 正解の選択肢は本文の表現をそのまま写さず言い換える。誤りの選択肢は本文に出てくる語を含みつつ内容が違うものにする。`,
 };
 
+// 会話文の長い会話（大問2の最後の1題）。短い会話の指示の代わりに使う
+const DIALOGUE_INSTRUCTIONS = `## 形式: 会話文の空所補充（大問2の長い会話）
+- 1題に設問2つ。title は空文字。passage は2人の会話で、A: / B: の形式の6〜9つの発言（改行で区切る。1つの発言は1〜3文）。
+- 店・電話・家庭・学校・駅などの日常の場面で、用件や相談が進んでいく、話の流れがはっきりした会話にする。
+- 会話の中に空所を ( 1 ) と ( 2 ) の形で1つずつ入れる。2つの空所は離れた発言に置く。空所には句または節が入る。
+- 設問の stem はそれぞれ "( 1 )"、"( 2 )" とする。
+- 選択肢は2〜7語程度の句または節で、空所の前後の発言とのつながりから正解が1つに決まるようにする。
+- 解説は空所ごとに、根拠になる前後の発言を英文で引用し、日本語訳を添える。`;
+
 const GENRE_INSTRUCTIONS: Record<PassageGenre, string> = {
   email: `- ジャンル: Eメール。設問は3つ。
 - title は件名（英語）。passage は次の形式で始める:
@@ -89,6 +98,7 @@ Subject: （件名）
 - title は英語のタイトル。passage は280〜320語、4段落（空行で区切る）。社会・科学・歴史・文化などについて事実に基づく内容にする（架空の研究者や町が登場してもよい）。
 - 設問は第1〜第4段落に1つずつ、順番どおりに対応させる。1問目は What is true about ...? の形にしてよい。本文全体から選ばせる設問は作らない。`,
   story: `- ジャンル: 物語文。設問は3〜4つ。`,
+  dialogue: "",
 };
 
 function formatExemplar(item: Item): string {
@@ -122,9 +132,9 @@ export function buildGenerationPrompt(params: {
 }): { system: string; user: string } {
   const { type, count, topics, genre, existing, exemplars = [] } = params;
   const lines = [
-    `次の条件で問題を${count}${type === "cloze" || type === "reading" ? "題" : "問"}作り、items に入れてください。`,
+    `次の条件で問題を${count}${type === "cloze" || type === "reading" || genre === "dialogue" ? "題" : "問"}作り、items に入れてください。`,
     "",
-    TYPE_INSTRUCTIONS[type],
+    type === "conversation" && genre === "dialogue" ? DIALOGUE_INSTRUCTIONS : TYPE_INSTRUCTIONS[type],
     type === "reading" && genre ? GENRE_INSTRUCTIONS[genre] : "",
     "",
     "## 各問題の題材（この順に1つずつ使う）",

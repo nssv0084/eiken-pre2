@@ -137,10 +137,10 @@ export function Home({ me }: { me: MeResponse }) {
                     <Icon name={TYPE_ICONS[s.type]} size={18} />
                   </span>
                   {QUESTION_TYPE_LABELS[s.type]}
-                  {s.genre === "email" ? "（Eメール）" : s.genre === "explanation" ? "（説明文）" : ""}
+                  {s.genre === "email" ? "（Eメール）" : s.genre === "explanation" ? "（説明文）" : s.genre === "dialogue" ? "（長い会話）" : ""}
                   <span className="count">
                     {s.count}
-                    {isPassageType(s.type) ? "題" : "問"}
+                    {isPassageType(s.type) || s.genre === "dialogue" ? "題" : "問"}
                   </span>
                 </li>
               ))}

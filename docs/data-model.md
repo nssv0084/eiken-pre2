@@ -10,7 +10,7 @@
 
 | エンティティ | pk | sk | gsi1pk | gsi1sk | 内容 |
 |---|---|---|---|---|---|
-| 出題単位（Item） | `ITEM#{itemId}` | `META` | `ITEMS#{grade}#{type}#{status}` | `{createdAt}` | 問題本体。語彙・会話文は設問1つ、長文型は本文と設問2〜4つ |
+| 出題単位（Item） | `ITEM#{itemId}` | `META` | `ITEMS#{grade}#{type}#{status}` | `{createdAt}` | 問題本体。語彙・短い会話は設問1つ、長文型と長い会話（会話文で genre が dialogue）は本文と設問2〜4つ |
 | ユーザー | `USER#{sub}` | `PROFILE` | `USERS#{role}` | `{username}` | ニックネーム、級、受験日、開始日、周回・日、連続学習日数、形式別の累計、通知の登録（端末ごとの送信先と鍵、最大5件） |
 | 日別の学習量 | `USER#{sub}` | `DAY#{date}` | — | — | 日別の解答数・正答数（形式別） |
 | 解答履歴 | `USER#{sub}` | `ANS#{timestamp}#{questionId}` | — | — | 1回ごとの解答（選んだ番号、正誤、どこで解いたか） |

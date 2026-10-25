@@ -4,7 +4,7 @@ import type { CurriculumProgress, Grade, PassageGenre, QuestionType } from "./ty
 export const CURRICULUM_DAYS = 30;
 export const REVIEW_MAX = 8;
 
-// count は語彙・会話文なら設問数、長文型なら長文の題数
+// count は語彙・短い会話なら設問数、長文型と長い会話（genre: dialogue）なら題数
 export interface Slot {
   type: QuestionType;
   count: number;
@@ -28,7 +28,8 @@ function pre2DayPlan(day: number): DayPlan {
       phase: "語彙・会話の基礎",
       slots: [
         { type: "vocab", count: 15 },
-        { type: "conversation", count: 5 },
+        { type: "conversation", count: 3 },
+        { type: "conversation", count: 1, genre: "dialogue" },
       ],
       reviewMax: REVIEW_MAX,
       isMock: false,
@@ -65,7 +66,8 @@ function pre2DayPlan(day: number): DayPlan {
       phase: "総合演習",
       slots: [
         { type: "vocab", count: 10 },
-        { type: "conversation", count: 3 },
+        { type: "conversation", count: 1 },
+        { type: "conversation", count: 1, genre: "dialogue" },
         { type: "cloze", count: 1 },
         { type: "reading", count: 1, genre: readingGenre(day) },
       ],
@@ -78,7 +80,8 @@ function pre2DayPlan(day: number): DayPlan {
     phase: "模試と振り返り",
     slots: [
       { type: "vocab", count: 15 },
-      { type: "conversation", count: 5 },
+      { type: "conversation", count: 3 },
+      { type: "conversation", count: 1, genre: "dialogue" },
       { type: "cloze", count: 1 },
       { type: "reading", count: 1, genre: "email" },
       { type: "reading", count: 1, genre: "explanation" },

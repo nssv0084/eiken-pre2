@@ -44,8 +44,8 @@ export function checkItemLevel(item: Item): LevelCheck {
   }
 
   if (item.type === "conversation") {
-    const q = item.questions[0];
-    const profile = profileText([q.stem, ...q.choices].join("\n"));
+    // 長い会話は会話文（passage）と2つの設問の選択肢も数える
+    const profile = profileText([item.passage ?? "", ...item.questions.flatMap((q) => [q.stem, ...q.choices])].join("\n"));
     const verdict = profile.aboveB1Rate > CONVERSATION_REVIEW_RATE ? "review" : "pass";
     notes.push(`B2・リスト外の語 ${pct(profile.aboveB1Rate)}`);
     return { verdict, notes, aboveB1Rate: profile.aboveB1Rate, hardWords: profile.hardWords };

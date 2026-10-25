@@ -19,7 +19,8 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
 export const PASSAGE_TYPES: readonly QuestionType[] = ["cloze", "reading"];
 export const isPassageType = (t: QuestionType) => PASSAGE_TYPES.includes(t);
 
-export type PassageGenre = "email" | "explanation" | "story";
+// dialogue は会話文の長い会話（本文に空所2つ）
+export type PassageGenre = "email" | "explanation" | "story" | "dialogue";
 
 export type ItemStatus = "pending" | "approved" | "review" | "reported" | "disabled";
 

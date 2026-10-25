@@ -7,7 +7,7 @@ import { StockForecastCard } from "../src/pages/admin/StockForecast";
 const forecastAt = (cycle: number, day: number, alertDays = 7) =>
   buildForecast({
     grade: "pre2",
-    deliverable: { vocab: 197, conversation: 79, cloze: 10, reading: 7 },
+    deliverable: { vocab: 197, conversation: 52, dialogue: 3, cloze: 10, reading: 7 },
     progresses: [{ cycle, day }],
     alertDays,
   });
@@ -33,7 +33,15 @@ describe("在庫の見通しの表示", () => {
   it("[STK-08] 警告日数より少ない形式に警告を付ける", () => {
     renderCard(forecastAt(1, 1, 15));
     expect(within(screen.getByText("語彙・熟語").closest("tr")!).getByText("⚠")).toBeInTheDocument();
-    expect(within(screen.getByText("会話文").closest("tr")!).queryByText("⚠")).not.toBeInTheDocument();
+    expect(within(screen.getByText("会話文（短い会話）").closest("tr")!).queryByText("⚠")).not.toBeInTheDocument();
+  });
+
+  it("[STK-18] 会話文は短い会話と長い会話を別の行で見通す", () => {
+    renderCard(forecastAt(1, 1));
+    const long = screen.getByText("会話文（長い会話）").closest("tr")!;
+    expect(within(long).getByText("3")).toBeInTheDocument();
+    expect(within(long).getByText("3日分")).toBeInTheDocument();
+    expect(within(screen.getByText("会話文（短い会話）").closest("tr")!).getByText("周の終わりまで足りる")).toBeInTheDocument();
   });
 
   it("[STK-07] 2周目以降は上限の見積りであることを明記する", () => {
