@@ -102,6 +102,16 @@ function formatExemplar(item: Item): string {
   return parts.join("\n");
 }
 
+function passageOpening(passage: string): string {
+  const body = passage
+    .split("\n")
+    .filter((line) => !/^(From|To|Date|Subject):/.test(line.trim()))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return (body.match(/^(.+?[.!?])\s+(.+?[.!?])(\s|$)/)?.slice(1, 3).join(" ") ?? body).slice(0, 240);
+}
+
 export function buildGenerationPrompt(params: {
   type: QuestionType;
   count: number;
@@ -133,7 +143,7 @@ export function buildGenerationPrompt(params: {
   }
 
   if (existing.length > 0) {
-    lines.push("", "## すでにある問題（内容・正解の語句・場面が重複しないようにする）");
+    lines.push("", "## すでにある問題（内容・正解の語句・場面・話の筋が重複しないようにする）");
     for (const item of existing) {
       const q = item.questions[0];
       if (!q) continue;
@@ -141,6 +151,9 @@ export function buildGenerationPrompt(params: {
       if (type === "vocab") {
         const wrong = q.choices.filter((_, i) => i !== q.answerIndex).join(", ");
         lines.push(`- ${head}（正解: ${q.choices[q.answerIndex]} ／ 誤り: ${wrong}）`);
+      } else if (item.passage) {
+        // タイトルだけでは筋が分からないので、本文の最初の2文も渡す
+        lines.push(`- ${head}: ${passageOpening(item.passage)}`);
       } else {
         lines.push(`- ${head}`);
       }

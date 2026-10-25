@@ -99,6 +99,21 @@ describe("buildGenerationPrompt", () => {
     expect(user).toContain("（正解: met ／ 誤り: a, b, c）");
   });
 
+  it("[GEN-04] 長文は既存問題のタイトルに加えて本文の冒頭を渡す（Eメールのヘッダーは除く）", () => {
+    const existing = [
+      {
+        title: "A Day at the Store",
+        passage: "From: Ann\nTo: Bob\nDate: May 1\nSubject: Hi\n\nRyan works at a small store. One day, his manager gave him advice. He listened.",
+        questions: [{ stem: "( 1 )", choices: ["a", "b", "c", "d"], answerIndex: 0 }],
+      },
+    ] as unknown as Item[];
+    const { user } = buildGenerationPrompt({ type: "cloze", count: 1, topics: ["仕事"], existing });
+    expect(user).toContain("A Day at the Store");
+    expect(user).toContain("Ryan works at a small store. One day, his manager gave him advice.");
+    expect(user).not.toContain("He listened.");
+    expect(user).not.toContain("From: Ann");
+  });
+
   it("[GEN-09] 同じ題材で複数作るときは、場面・人物・筋を変えるよう指示する", () => {
     const { user } = buildGenerationPrompt({ type: "cloze", count: 2, topics: ["コンビニ", "コンビニ"], existing: [] });
     expect(user).toContain("同じ題材で複数作る");
