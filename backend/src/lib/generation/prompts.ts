@@ -119,6 +119,9 @@ export function buildGenerationPrompt(params: {
     "",
     "## 各問題の題材（この順に1つずつ使う）",
     ...topics.map((t, i) => `${i + 1}. ${t}`),
+    new Set(topics).size < topics.length
+      ? "- 同じ題材で複数作るので、問題ごとに場面・登場人物・話の筋（長文では登場人物が得る気づきや結末）を変える。語彙の問題では、問う語句の分野も重ならないようにする。"
+      : "",
   ];
 
   if (exemplars.length > 0) {
