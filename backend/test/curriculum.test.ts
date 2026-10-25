@@ -37,9 +37,32 @@ describe("getDayPlan", () => {
     const questionsPerItem = { vocab: 1, conversation: 1, cloze: 2 } as const;
     const total = plan.slots.reduce((sum, s) => {
       if (s.type === "reading") return sum + (s.genre === "email" ? 3 : 4);
+      if (s.genre === "dialogue") return sum + s.count * 2;
       return sum + s.count * questionsPerItem[s.type];
     }, 0);
     expect(total).toBe(29);
+  });
+
+  it("[CUR-06][CUR-07] 会話文は短い会話と長い会話に分かれ、1周で短い会話52問・長い会話14題", () => {
+    let short = 0;
+    let long = 0;
+    for (let d = 1; d <= CURRICULUM_DAYS; d++) {
+      for (const s of getDayPlan("pre2", d).slots) {
+        if (s.type !== "conversation") continue;
+        if (s.genre === "dialogue") long += s.count;
+        else short += s.count;
+      }
+    }
+    expect(short).toBe(52);
+    expect(long).toBe(14);
+  });
+
+  it("[CUR-07] 30日目の会話文は短い会話3問と長い会話1題（本番と同じ）", () => {
+    const conv = getDayPlan("pre2", 30).slots.filter((s) => s.type === "conversation");
+    expect(conv).toEqual([
+      { type: "conversation", count: 3 },
+      { type: "conversation", count: 1, genre: "dialogue" },
+    ]);
   });
 
   it("[CUR-02] 内容一致はEメールと説明文が交互", () => {

@@ -62,6 +62,35 @@ describe("SetSummary", () => {
 describe("QuestionRunner", () => {
   beforeEach(() => api.mockReset());
 
+  it("[CUR-08] 長い会話は、会話の本文と設問をタブで切り替えて表示する", async () => {
+    const dialogue = {
+      id: "d1",
+      type: "conversation",
+      genre: "dialogue",
+      title: "",
+      passage: "A: Hi.\nB: ( 1 )\nA: OK.\nB: ( 2 )",
+      questions: [
+        { id: "d1:0", stem: "( 1 )", choices: ["a1", "b1", "c1", "d1"] },
+        { id: "d1:1", stem: "( 2 )", choices: ["a2", "b2", "c2", "d2"] },
+      ],
+    } as unknown as PublicItem;
+    render(
+      <QuestionRunner
+        title="会話文（長い会話）"
+        entries={[{ itemId: "d1", questionIds: ["d1:0", "d1:1"] }]}
+        items={{ d1: dialogue }}
+        context="curriculum"
+        onFinish={vi.fn()}
+        onQuit={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "本文" })).toHaveClass("active");
+    expect(screen.getByText(/A: Hi./)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "設問" }));
+    expect(screen.getByRole("button", { name: "設問" })).toHaveClass("active");
+    expect(screen.getByText("1 / 2")).toBeInTheDocument();
+  });
+
   const renderRunner = (onFinish = vi.fn()) =>
     render(
       <QuestionRunner

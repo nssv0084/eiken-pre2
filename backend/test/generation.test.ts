@@ -45,6 +45,21 @@ describe("validateGenItem", () => {
     expect(validateGenItem({ ...base, passage: `${"x".repeat(300)} ( 1 ) and ( 2 )` }, "cloze")).toBeNull();
     expect(validateGenItem({ ...base, passage: `${"x".repeat(300)} ( 1 )` }, "cloze")).toMatch("( 2 )");
   });
+
+  it("[GEN-11] 長い会話は会話の本文に ( 1 ) ( 2 ) があり、設問が2つ", () => {
+    const q = { ...vocab().questions[0], stem: "( 1 )" };
+    const dialogue = "A: Hi.\nB: Hello. ( 1 )\nA: Sure.\nB: Thanks.\nA: Also, ( 2 )\nB: OK.";
+    const base = { topic: "t", focus: "none" as const, title: "", questions: [q, { ...q, stem: "( 2 )" }] };
+    expect(validateGenItem({ ...base, passage: dialogue }, "conversation", "dialogue")).toBeNull();
+    expect(validateGenItem({ ...base, passage: dialogue.replace("( 2 )", "") }, "conversation", "dialogue")).toMatch("( 2 )");
+    expect(validateGenItem({ ...base, questions: [q], passage: dialogue }, "conversation", "dialogue")).toMatch("設問数");
+    expect(validateGenItem({ ...base, passage: "" }, "conversation", "dialogue")).toMatch("会話");
+  });
+
+  it("[GEN-06] 短い会話は本文を持たない（従来どおり）", () => {
+    const q = { ...vocab().questions[0], stem: "A: Hi.\nB: ( )" };
+    expect(validateGenItem({ topic: "t", focus: "none", title: "", passage: "", questions: [q] }, "conversation")).toBeNull();
+  });
 });
 
 describe("shuffleChoices", () => {
@@ -112,6 +127,17 @@ describe("buildGenerationPrompt", () => {
     expect(user).toContain("Ryan works at a small store. One day, his manager gave him advice.");
     expect(user).not.toContain("He listened.");
     expect(user).not.toContain("From: Ann");
+  });
+
+  it("[GEN-10] 長い会話は専用の指示を使い、短い会話の指示は含めない", () => {
+    const long = buildGenerationPrompt({ type: "conversation", genre: "dialogue", count: 2, topics: ["学校", "家族"], existing: [] }).user;
+    expect(long).toContain("長い会話");
+    expect(long).toContain("( 1 )");
+    expect(long).toContain("2題");
+    expect(long).not.toContain("4つの発言");
+    const short = buildGenerationPrompt({ type: "conversation", count: 2, topics: ["学校", "家族"], existing: [] }).user;
+    expect(short).toContain("4つの発言");
+    expect(short).toContain("2問");
   });
 
   it("[GEN-09] 同じ題材で複数作るときは、場面・人物・筋を変えるよう指示する", () => {

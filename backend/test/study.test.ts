@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Item, UserProfile } from "../../shared/types";
 import { usageFlag } from "../src/lib/study/feedback";
+import { poolForSlot } from "../src/lib/study/pool";
 import { selectItems } from "../src/lib/study/select";
 import { nextQuestionState, type QuestionState } from "../src/lib/study/srs";
 import { currentStreak, markStudied } from "../src/lib/study/streak";
@@ -55,6 +56,21 @@ describe("selectItems（出題の選び方）", () => {
   it("[CYC-02] 2周目は前の周で間違えた問題を最優先", () => {
     const ids = selectItems({ items, states, cycle: 2, count: 2 }).map((i) => i.id);
     expect(ids).toEqual(["weak", "fresh"]);
+  });
+
+  it("[CUR-07] 短い会話の枠には短い会話だけ、長い会話の枠には長い会話だけを出す", () => {
+    const conv = [
+      { id: "s1", type: "conversation" },
+      { id: "l1", type: "conversation", genre: "dialogue" },
+      { id: "s2", type: "conversation" },
+    ] as unknown as Item[];
+    expect(poolForSlot(conv, { type: "conversation", count: 3 }).map((i) => i.id)).toEqual(["s1", "s2"]);
+    expect(poolForSlot(conv, { type: "conversation", count: 1, genre: "dialogue" }).map((i) => i.id)).toEqual(["l1"]);
+    const reading = [
+      { id: "e", type: "reading", genre: "email" },
+      { id: "x", type: "reading", genre: "explanation" },
+    ] as unknown as Item[];
+    expect(poolForSlot(reading, { type: "reading", count: 1, genre: "email" }).map((i) => i.id)).toEqual(["e"]);
   });
 
   it("除外した問題は選ばない", () => {

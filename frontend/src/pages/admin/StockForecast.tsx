@@ -1,6 +1,13 @@
 import { Link } from "react-router-dom";
 import type { Forecast } from "../../../../shared/stock";
+import type { ForecastKey } from "../../../../shared/stock";
 import { QUESTION_TYPE_LABELS } from "../../../../shared/types";
+
+const FORECAST_LABELS: Record<ForecastKey, string> = {
+  ...QUESTION_TYPE_LABELS,
+  conversation: "会話文（短い会話）",
+  dialogue: "会話文（長い会話）",
+};
 
 export function StockForecastCard({ forecast, leadName }: { forecast: Forecast | null; leadName?: string }) {
   if (!forecast) {
@@ -39,7 +46,7 @@ export function StockForecastCard({ forecast, leadName }: { forecast: Forecast |
               <tr key={f.type}>
                 <td>
                   {f.warn && <span className="error">⚠ </span>}
-                  {QUESTION_TYPE_LABELS[f.type]}
+                  {FORECAST_LABELS[f.type]}
                 </td>
                 <td>{f.deliverable}</td>
                 <td className={f.warn ? "error" : undefined}>{f.daysLeft === null ? "周の終わりまで足りる" : `${f.daysLeft}日分`}</td>

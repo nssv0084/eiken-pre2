@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { buildForecast, deliverableCount, MAX_PER_JOB } from "../../shared/stock";
-import type { QuestionType } from "../../shared/types";
+import { buildForecast, deliverableCount, MAX_PER_JOB, type ForecastKey } from "../../shared/stock";
 
-const stockOf = (s: Partial<Record<QuestionType, number>>) => ({
+const stockOf = (s: Partial<Record<ForecastKey, number>>) => ({
   vocab: 0,
   conversation: 0,
+  dialogue: 0,
   cloze: 0,
   reading: 0,
   ...s,
 });
 
-const forecast = (stock: Partial<Record<QuestionType, number>>, progresses: { cycle: number; day: number }[], alertDays = 7) =>
+const forecast = (stock: Partial<Record<ForecastKey, number>>, progresses: { cycle: number; day: number }[], alertDays = 7) =>
   buildForecast({ grade: "pre2", deliverable: stockOf(stock), progresses, alertDays });
 
-const of = (f: ReturnType<typeof forecast>, type: QuestionType) => f!.items.find((i) => i.type === type)!;
+const of = (f: ReturnType<typeof forecast>, type: ForecastKey) => f!.items.find((i) => i.type === type)!;
 
 describe("在庫の見通し", () => {
   it("[STK-05] 1日目から毎日進むと、語彙197問は14日分（15日目で足りなくなる）", () => {
@@ -23,7 +23,7 @@ describe("在庫の見通し", () => {
   });
 
   it("[STK-05] 周の終わりまで足りるときは daysLeft が null", () => {
-    const f = forecast({ vocab: 339, conversation: 80, cloze: 12, reading: 13 }, [{ cycle: 1, day: 1 }]);
+    const f = forecast({ vocab: 339, conversation: 52, dialogue: 14, cloze: 12, reading: 13 }, [{ cycle: 1, day: 1 }]);
     for (const item of f!.items) {
       expect(item.daysLeft).toBeNull();
       expect(item.shortage).toBe(0);
@@ -63,10 +63,10 @@ describe("在庫の見通し", () => {
 
   it("[STK-08] 警告日数より少ない形式だけ警告する", () => {
     // 語彙は14日分、会話文は周の終わりまで足りる
-    const f = forecast({ vocab: 197, conversation: 80, cloze: 12, reading: 13 }, [{ cycle: 1, day: 1 }], 15);
+    const f = forecast({ vocab: 197, conversation: 52, dialogue: 14, cloze: 12, reading: 13 }, [{ cycle: 1, day: 1 }], 15);
     expect(of(f, "vocab").warn).toBe(true);
     expect(of(f, "conversation").warn).toBe(false);
-    const g = forecast({ vocab: 197, conversation: 80, cloze: 12, reading: 13 }, [{ cycle: 1, day: 1 }], 14);
+    const g = forecast({ vocab: 197, conversation: 52, dialogue: 14, cloze: 12, reading: 13 }, [{ cycle: 1, day: 1 }], 14);
     expect(of(g, "vocab").warn).toBe(false);
   });
 
@@ -82,6 +82,17 @@ describe("在庫の見通し", () => {
     const r = of(forecast({ reading: 7 }, [{ cycle: 1, day: 1 }]), "reading");
     expect(r.shortage).toBe(6);
     expect(r.daysLeft).toBe(25); // 19〜25日目の7題で使い切り、26日目で足りなくなる
+  });
+
+  it("[STK-18] 会話文は短い会話（問）と長い会話（題）を分けて見通す", () => {
+    const f = forecast({ conversation: 39, dialogue: 5 }, [{ cycle: 1, day: 1 }]);
+    // 短い会話: 1〜10日目は3問ずつ（30問）、11日目からは2問ずつ → 15日目で足りなくなる
+    expect(of(f, "conversation").daysLeft).toBe(14);
+    expect(of(f, "conversation").shortage).toBe(52 - 39);
+    // 長い会話: 1〜10日目に1題ずつ → 6日目で足りなくなる
+    expect(of(f, "dialogue").daysLeft).toBe(5);
+    expect(of(f, "dialogue").shortage).toBe(14 - 5);
+    expect(of(f, "dialogue").runs).toBe(Math.ceil(10 / 5));
   });
 
   it("[STK-11] 生徒がいなければ見通しを出さない", () => {

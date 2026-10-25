@@ -19,6 +19,10 @@ import { verifyItem } from "./verify";
 
 // 1回の生成呼び出しで作る数
 const PER_CALL: Record<QuestionType, number> = { vocab: 10, conversation: 5, cloze: 1, reading: 1 };
+const perCall = (job: GenerateJob) => (job.genre === "dialogue" ? 1 : PER_CALL[job.type]);
+// 会話文は、短い会話と長い会話を混ぜない（見本・重複回避とも同じ種類だけを使う）
+const sameKind = (job: GenerateJob) => (e: Item) =>
+  job.type === "reading" ? e.genre === job.genre : job.type !== "conversation" || (e.genre === "dialogue") === (job.genre === "dialogue");
 // 重複回避のためにプロンプトへ渡す既存問題の数
 const EXISTING_FOR_PROMPT: Record<QuestionType, number> = { vocab: 150, conversation: 60, cloze: 30, reading: 30 };
 const VERIFY_CONCURRENCY = 3;
@@ -37,7 +41,7 @@ function toItem(gen: GenItem, job: GenerateJob, model: string, now: string): Ite
     type: job.type,
     status: "pending",
     focus: job.type === "vocab" && gen.focus !== "none" ? gen.focus : undefined,
-    genre: job.type === "reading" ? job.genre : undefined,
+    genre: job.type === "reading" || job.genre === "dialogue" ? job.genre : undefined,
     title: gen.title || undefined,
     passage: gen.passage || undefined,
     questions: gen.questions.map((q, i) => ({ ...shuffleChoices(q), id: `${id}:${i}` })),
@@ -71,7 +75,7 @@ export async function runJob(jobId: string): Promise<void> {
   const counts = { approved: 0, review: 0, rejected: 0, usd: 0 };
   const accepted = () => counts.approved + counts.review;
   // 不合格の分を作り直せるよう、必要な呼び出し回数の2倍まで試す
-  const maxCalls = Math.ceil(job.count / PER_CALL[job.type]) * 2 + 1;
+  const maxCalls = Math.ceil(job.count / perCall(job)) * 2 + 1;
 
   try {
     // 講師の承認数と確認待ちの数の合計が目標に届くまでは、合格した問題をすべて確認待ちにする
@@ -80,15 +84,15 @@ export async function runJob(jobId: string): Promise<void> {
       (await getTeacherApprovedCount(job.grade, job.type)) -
       (await countItems(job.grade, job.type, "review"));
     const exemplars = (await listExemplars(job.grade, job.type))
-      .filter((e) => job.type !== "reading" || e.genre === job.genre)
-      .slice(0, job.type === "cloze" || job.type === "reading" ? 1 : 5);
-    const existing = await recentItemsForDedup(job.grade, job.type, EXISTING_FOR_PROMPT[job.type]);
+      .filter(sameKind(job))
+      .slice(0, job.type === "cloze" || job.type === "reading" || job.genre === "dialogue" ? 1 : 5);
+    const existing = (await recentItemsForDedup(job.grade, job.type, EXISTING_FOR_PROMPT[job.type])).filter(sameKind(job));
 
     for (let call = 0; call < maxCalls && accepted() < job.count; call++) {
       const usage = await getUsageSummary(settings);
       if (!usage.canGenerate) throw new Error(`API 使用額が予算の上限（${usage.stopAtJpy}円）に達したため停止しました`);
 
-      const n = Math.min(PER_CALL[job.type], job.count - accepted());
+      const n = Math.min(perCall(job), job.count - accepted());
       const prompt = buildGenerationPrompt({
         type: job.type,
         count: n,

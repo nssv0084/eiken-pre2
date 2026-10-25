@@ -1,14 +1,21 @@
 import { CURRICULUM_DAYS, completedDays, getDayPlan } from "./curriculum";
-import { QUESTION_TYPES, type CurriculumProgress, type Grade, type ItemStatus, type QuestionType } from "./types";
+import { type CurriculumProgress, type Grade, type ItemStatus, type QuestionType } from "./types";
 
 // 1回の生成ジョブで作れる上限（Lambda の15分以内に収まる量）
 export const MAX_PER_JOB: Record<QuestionType, number> = { vocab: 30, conversation: 15, cloze: 5, reading: 5 };
+// 長い会話は1題に設問が2つあるので、長文と同じく少なめ
+export const MAX_DIALOGUE_PER_JOB = 5;
+
+// 見通しの単位。会話文は短い会話（conversation）と長い会話（dialogue）に分ける
+export type ForecastKey = QuestionType | "dialogue";
+export const FORECAST_KEYS: ForecastKey[] = ["vocab", "conversation", "dialogue", "cloze", "reading"];
+const maxPerJob = (key: ForecastKey) => (key === "dialogue" ? MAX_DIALOGUE_PER_JOB : MAX_PER_JOB[key]);
 
 // 出題前の無効化や報告で減る分の余裕
 const BUFFER_PERCENT = 10;
 
 export interface TypeForecast {
-  type: QuestionType;
+  type: ForecastKey;
   deliverable: number;
   // 毎日1日分ずつ進めたとき、在庫で足りる日数。現在の周の終わりまで足りるなら null
   daysLeft: number | null;
@@ -29,15 +36,17 @@ export interface Forecast {
 export const deliverableCount = (counts: Partial<Record<ItemStatus, number>>): number => counts.approved ?? 0;
 
 // 通算の日数（0始まり）の1日分で、形式ごとに必要な数。復習は在庫を使わないので含めない
-function dayDemand(grade: Grade, dayIndex: number): Record<QuestionType, number> {
-  const demand = { vocab: 0, conversation: 0, cloze: 0, reading: 0 };
-  for (const slot of getDayPlan(grade, (dayIndex % CURRICULUM_DAYS) + 1).slots) demand[slot.type] += slot.count;
+function dayDemand(grade: Grade, dayIndex: number): Record<ForecastKey, number> {
+  const demand = { vocab: 0, conversation: 0, dialogue: 0, cloze: 0, reading: 0 };
+  for (const slot of getDayPlan(grade, (dayIndex % CURRICULUM_DAYS) + 1).slots) {
+    demand[slot.genre === "dialogue" ? "dialogue" : slot.type] += slot.count;
+  }
   return demand;
 }
 
 export function buildForecast(params: {
   grade: Grade;
-  deliverable: Record<QuestionType, number>;
+  deliverable: Record<ForecastKey, number>;
   progresses: CurriculumProgress[];
   alertDays: number;
 }): Forecast | null {
@@ -48,7 +57,7 @@ export function buildForecast(params: {
   const done = completedDays(lead);
   const cycleEnd = lead.cycle * CURRICULUM_DAYS;
 
-  const items = QUESTION_TYPES.map((type): TypeForecast => {
+  const items = FORECAST_KEYS.map((type): TypeForecast => {
     let used = 0;
     for (let d = 0; d < done; d++) used += dayDemand(grade, d)[type];
     const remaining = Math.max(0, deliverable[type] - used);
@@ -68,7 +77,7 @@ export function buildForecast(params: {
       daysLeft,
       shortage,
       suggested,
-      runs: Math.ceil(suggested / MAX_PER_JOB[type]),
+      runs: Math.ceil(suggested / maxPerJob(type)),
       warn: daysLeft !== null && daysLeft < alertDays,
     };
   });
