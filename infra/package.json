@@ -9,7 +9,7 @@
     "diff": "npm run check-account && cdk diff --all --profile eiken",
     "bootstrap": "npm run check-account && cdk bootstrap --profile eiken",
     "deploy": "npm run check-account && cdk deploy EikenCert EikenApp --profile eiken --require-approval broadening",
-    "deploy:ci": "cdk deploy EikenCert EikenApp --require-approval broadening --ci",
+    "deploy:ci": "cdk deploy EikenCert EikenApp --require-approval never --ci",
     "deploy:github": "npm run check-account && cdk deploy EikenGithub --profile eiken",
     "test": "vitest run"
   },

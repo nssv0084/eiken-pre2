@@ -36,8 +36,42 @@ jobs:
             echo "アプリに関わる変更がないため、デプロイしません。"
           fi
 
-  deploy:
+  # 承認の前に、読み取り専用のロールで変更点を出す。承認する人はこのジョブのサマリーを見てから承認する
+  plan:
     needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::302961875808:role/eiken-github-plan
+          aws-region: ap-northeast-1
+      - name: 変更点（cdk diff）
+        working-directory: infra
+        run: |
+          set -o pipefail
+          npx cdk diff EikenCert EikenApp --no-change-set 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | tee diff.txt
+          {
+            echo "## デプロイされる変更点"
+            if grep -qE "IAM (Statement|Policy) Changes" diff.txt; then
+              echo "> ⚠ IAM の権限が変わります。下の差分を確認してから承認してください。"
+            fi
+            echo '```'
+            tail -c 60000 diff.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: [changes, plan]
     if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     environment: production
