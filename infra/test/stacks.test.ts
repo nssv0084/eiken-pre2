@@ -90,7 +90,20 @@ describe("アプリのスタック", () => {
 });
 
 describe("GitHub 連携のスタック", () => {
-  it("信頼されるのは、このリポジトリの production 環境だけ", () => {
+  it("[NFR-07] 差分用ロールは main のジョブだけが引き受けられ、CDK の読み取り用ロールしか引き受けられない", () => {
+    const roles = Object.values(githubT.findResources("AWS::IAM::Role")).filter((r) => r.Properties.RoleName === "eiken-github-plan");
+    expect(roles).toHaveLength(1);
+    const trust = JSON.stringify(roles[0].Properties.AssumeRolePolicyDocument);
+    expect(trust).toContain(`${config.githubSubjectPrefix}:ref:refs/heads/main`);
+    const statements = Object.values(githubT.findResources("AWS::IAM::Policy"))
+      .filter((p) => JSON.stringify(p.Properties.Roles).includes("PlanRole"))
+      .flatMap((p) => p.Properties.PolicyDocument.Statement);
+    expect(statements).toHaveLength(1);
+    expect(statements[0].Action).toBe("sts:AssumeRole");
+    expect(JSON.stringify(statements[0].Resource)).toContain("-lookup-role-");
+  });
+
+  it("[NFR-07] デプロイ用ロールは、このリポジトリの production 環境（承認つき）だけが引き受けられる", () => {
     const roles = Object.values(githubT.findResources("AWS::IAM::Role")).filter((r) => r.Properties.RoleName === "eiken-github-deploy");
     expect(roles).toHaveLength(1);
     const trust = JSON.stringify(roles[0].Properties.AssumeRolePolicyDocument);
