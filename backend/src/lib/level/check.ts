@@ -23,12 +23,13 @@ export function checkItemLevel(item: Item): LevelCheck {
     const easyDistractors = distractorLevels.filter((l) => l === "A1").length;
 
     let verdict: LevelCheck["verdict"] = "pass";
+    // 本番の過去問でも正解の単語の1割強は A1・B2・リスト外なので、不合格にせず講師の確認に回す
     if (answerLevel === "A1") {
-      verdict = "fail";
-      notes.push(`正解の語 ${answer} は A1（易しすぎる）`);
+      verdict = "review";
+      notes.push(`正解の語 ${answer} は A1（易しめ）`);
     } else if (answerLevel === "B2") {
-      verdict = "fail";
-      notes.push(`正解の語 ${answer} は B2（難しすぎる）`);
+      verdict = "review";
+      notes.push(`正解の語 ${answer} は B2（難しめ）`);
     } else if (answerLevel === "unknown") {
       verdict = "review";
       notes.push(`正解の語 ${answer} は語彙リストにない`);

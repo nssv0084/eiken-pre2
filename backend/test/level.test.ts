@@ -46,9 +46,29 @@ const vocabItem = (answer: string, distractors: string[], focus: Item["focus"] =
     questions: [{ id: "x:0", stem: "( )", choices: [answer, ...distractors], answerIndex: 0, explanation: "" }],
   }) as unknown as Item;
 
+describe("語形の戻し方", () => {
+  it("[LVL-01] 不規則な過去形・過去分詞を原形で引く", () => {
+    for (const [w, lemma] of [["said", "say"], ["fed", "feed"], ["shown", "show"], ["struck", "strike"]]) {
+      expect(wordLevel(w)).toBe(wordLevel(lemma));
+    }
+  });
+
+  it("[LVL-01] 短縮形は元の語で引く", () => {
+    expect(wordLevel("didn’t")).toBe("A1");
+    expect(wordLevel("won't")).toBe("A1");
+    expect(wordLevel("they're")).toBe("A1");
+  });
+
+  it("[LVL-01] 候補が複数あるときは低いレベルを採る（found は find の過去形として A1）", () => {
+    expect(wordLevel("found")).toBe("A1");
+    expect(wordLevel("known")).toBe("A1");
+  });
+});
+
 describe("checkItemLevel", () => {
-  it("[LVL-01] 正解の単語が A1 なら不合格、A2〜B1 なら合格", () => {
-    expect(checkItemLevel(vocabItem("always", ["rarely", "never", "hardly"])).verdict).toBe("fail");
+  it("[LVL-01] 正解の単語が A2〜B1 なら合格、A1・B2・リスト外なら確認待ち", () => {
+    expect(checkItemLevel(vocabItem("always", ["rarely", "never", "hardly"])).verdict).toBe("review");
+    expect(checkItemLevel(vocabItem("reluctant", ["curious", "honest", "brave"])).verdict).toBe("review");
     expect(checkItemLevel(vocabItem("reliable", ["expensive", "empty", "noisy"])).verdict).toBe("pass");
   });
 

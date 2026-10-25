@@ -25,6 +25,11 @@ const IRREGULAR: Record<string, string> = {
   hid: "hide", hidden: "hide", shook: "shake", shaken: "shake", stole: "steal",
   stolen: "steal", froze: "freeze", frozen: "freeze", rode: "ride", ridden: "ride",
   bit: "bite", bitten: "bite", blew: "blow", blown: "blow", knew: "know", known: "know",
+  said: "say", fed: "feed", born: "bear", shown: "show", laid: "lay", hung: "hang",
+  shot: "shoot", struck: "strike", lit: "light", fled: "flee", bent: "bend", lent: "lend",
+  dug: "dig", swept: "sweep", bred: "breed", sank: "sink", sunk: "sink", stuck: "stick",
+  swung: "swing", tore: "tear", torn: "tear", wept: "weep", sped: "speed", fit: "fit",
+  overslept: "oversleep", forgave: "forgive", forgiven: "forgive", hit: "hit",
   children: "child", men: "man", women: "woman", people: "person",
   feet: "foot", teeth: "tooth", mice: "mouse", better: "good", best: "good",
   worse: "bad", worst: "bad", further: "far", farther: "far",
@@ -32,11 +37,27 @@ const IRREGULAR: Record<string, string> = {
 
 const VOWELS = /[aeiou]/;
 
+const normalize = (raw: string) => raw.toLowerCase().replace(/[’']s$/, "").replace(/[’']/g, "'");
+
+// 規則では戻せない形（不規則な活用、短縮形）の元の語
+function explicitLemmas(w: string): string[] {
+  const out: string[] = [];
+  // didn't → did → do、won't → will
+  const negative = w.match(/^(.+)n't$/);
+  const contracted = w.match(/^(.+)'(re|ve|ll|d|m|s)$/);
+  const base = negative ? ({ wo: "will", ca: "can", sha: "shall" }[negative[1]] ?? negative[1]) : contracted?.[1];
+  if (base) {
+    out.push(base);
+    if (IRREGULAR[base]) out.push(IRREGULAR[base]);
+  }
+  if (IRREGULAR[w]) out.push(IRREGULAR[w]);
+  return out;
+}
+
 // 語形変化を戻した見出し語の候補（元の形を最優先）
 export function lemmaCandidates(raw: string): string[] {
-  const w = raw.toLowerCase().replace(/[’']s$/, "").replace(/[’']/g, "'");
-  const out = [w];
-  if (IRREGULAR[w]) out.push(IRREGULAR[w]);
+  const w = normalize(raw);
+  const out = [w, ...explicitLemmas(w)];
   const add = (s: string) => s.length > 1 && out.push(s);
   if (w.endsWith("ies")) add(w.slice(0, -3) + "y");
   if (w.endsWith("es")) add(w.slice(0, -2));
@@ -68,7 +89,14 @@ export function lemmaCandidates(raw: string): string[] {
   return [...new Set(out)];
 }
 
+const ORDER: CefrLevel[] = ["A1", "A2", "B1", "B2"];
+
+// 元の形がリストにあればそれを使う。ただし不規則な活用・短縮形の元の語もあれば、低いほうを採る
+// （found は「設立する」B2 ではなく find の過去形 A1。unlikely は likely に戻さず B1 のまま）
 export function wordLevel(word: string): CefrLevel | undefined {
+  const w = normalize(word);
+  const direct = [w, ...explicitLemmas(w)].map((c) => LIST[c]).filter((l): l is CefrLevel => !!l);
+  if (direct.length) return direct.reduce((a, b) => (ORDER.indexOf(b) < ORDER.indexOf(a) ? b : a));
   for (const c of lemmaCandidates(word)) {
     if (LIST[c]) return LIST[c];
   }
