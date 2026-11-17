@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Item } from "../../shared/types";
-import { buildGenerationPrompt } from "../src/lib/generation/prompts";
+import { buildGenerationPrompt, SOLVE_SYSTEM } from "../src/lib/generation/prompts";
 import { shuffleChoices, validateGenItem, type GenItem } from "../src/lib/generation/schema";
 import { judgeSolve, type SolveResult } from "../src/lib/generation/verify";
 
@@ -138,6 +138,17 @@ describe("buildGenerationPrompt", () => {
     const short = buildGenerationPrompt({ type: "conversation", count: 2, topics: ["学校", "家族"], existing: [] }).user;
     expect(short).toContain("4つの発言");
     expect(short).toContain("2問");
+  });
+
+  it("[GEN-12] 会話文は手がかりをあいまいにせず、言い換えと誤答の強さで難しくするよう指示する", () => {
+    for (const genre of [undefined, "dialogue"] as const) {
+      const { user } = buildGenerationPrompt({ type: "conversation", genre, count: 1, topics: ["買い物"], existing: [] });
+      expect(user).toContain("あいまいにしたりして難しくしない");
+      expect(user).toContain("言い換え");
+      expect(user).toContain("空所の前だけを読むと正解に見える");
+    }
+    expect(buildGenerationPrompt({ type: "vocab", count: 1, topics: ["買い物"], existing: [] }).user).not.toContain("言い換え");
+    expect(SOLVE_SYSTEM).toContain("別の読み方でも試し");
   });
 
   it("[GEN-09] 同じ題材で複数作るときは、場面・人物・筋を変えるよう指示する", () => {
